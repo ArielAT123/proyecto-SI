@@ -6,7 +6,8 @@ export const listUsers = async (req, res) => {
     return res.status(403).json({ error: 'Acceso denegado' });
   }
   try {
-    const users = await userService.listAllUsers();
+    const { role } = req.query;
+    const users = await userService.listAllUsers(role);
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -38,6 +39,20 @@ export const rechargeWallet = async (req, res) => {
   try {
     const safeUser = await userService.rechargeUserWallet(userId, amount);
     res.json(safeUser);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Acceso denegado. Se requiere perfil administrador.' });
+  }
+  const userId = parseInt(req.params.id);
+  const { name, email, role, password, restaurantId } = req.body;
+  try {
+    const updated = await userService.updateUserData(userId, { name, email, role, password, restaurantId });
+    res.json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

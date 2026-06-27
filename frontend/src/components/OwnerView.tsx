@@ -111,10 +111,12 @@ export default function OwnerView({ activeTab }: OwnerViewProps) {
         <div>
           <h2 className="text-xl font-bold text-brandText-title flex items-center gap-2">
             <Settings className="w-5 h-5 text-brand-primary" />
-            Panel de Operador del Restaurante
+            {activeTab === 'tables' ? 'Panel de Operador (Empleado / Operador)' : 'Panel de Campañas Publicitarias (Dueño)'}
           </h2>
           <p className="text-brandText-body text-xs mt-1">
-            Gestión en tiempo real de la disponibilidad de las mesas de tu local y campañas publicitarias.
+            {activeTab === 'tables' 
+              ? 'Gestión en tiempo real de la disponibilidad de las mesas de tu local.' 
+              : 'Diseño, publicación y activación de promociones y anuncios publicitarios de tus locales.'}
           </p>
         </div>
         <div className="flex items-center gap-3">

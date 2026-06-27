@@ -6,7 +6,7 @@ import OwnerView from './components/OwnerView';
 import AdminView from './components/AdminView';
 import LoginView from './components/LoginView';
 import BookingModal from './components/client/BookingModal';
-import { Wallet, LogOut, ShieldAlert, Store, Menu, X, ChevronLeft, ChevronRight, User as UserIcon, Layers, Megaphone } from 'lucide-react';
+import { Wallet, LogOut, ShieldAlert, Store, Menu, X, ChevronLeft, ChevronRight, User as UserIcon, Layers, Megaphone, BarChart3, Users } from 'lucide-react';
 import aforoGoIcon from './assets/aforoGo_icon.png';
 import { Restaurant } from './types';
 
@@ -14,6 +14,7 @@ function AppContent() {
   const { currentUser, token, logout, loading } = useApp();
   const [clientTab, setClientTab] = useState<'home' | 'wallet'>('home');
   const [ownerTab, setOwnerTab] = useState<'tables' | 'ads'>('tables');
+  const [adminTab, setAdminTab] = useState<'stats' | 'locales' | 'users'>('stats');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -25,6 +26,14 @@ function AppContent() {
   const [bookingTime, setBookingTime] = useState('20:00');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const getRoleLabel = () => {
+    if (!currentUser) return '';
+    if (currentUser.role === 'OWNER') {
+      return ownerTab === 'tables' ? 'Empleado / Operador' : 'Dueño';
+    }
+    return currentUser.role;
+  };
 
   if (loading) {
     return (
@@ -189,6 +198,55 @@ function AppContent() {
                 </button>
               </>
             )}
+            {currentUser.role === 'ADMIN' && (
+              <>
+                <button
+                  onClick={() => {
+                    setAdminTab('stats');
+                    if (isMobile) setIsSidebarOpen(false);
+                  }}
+                  title="Estadísticas"
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
+                    adminTab === 'stats'
+                      ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
+                      : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
+                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                >
+                  <BarChart3 className="w-5 h-5 shrink-0" />
+                  {!collapsed && <span>Estadísticas</span>}
+                </button>
+                <button
+                  onClick={() => {
+                    setAdminTab('locales');
+                    if (isMobile) setIsSidebarOpen(false);
+                  }}
+                  title="Gestión de Locales"
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
+                    adminTab === 'locales'
+                      ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
+                      : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
+                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                >
+                  <Store className="w-5 h-5 shrink-0" />
+                  {!collapsed && <span>Gestión de Locales</span>}
+                </button>
+                <button
+                  onClick={() => {
+                    setAdminTab('users');
+                    if (isMobile) setIsSidebarOpen(false);
+                  }}
+                  title="Gestión de Usuarios"
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
+                    adminTab === 'users'
+                      ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
+                      : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
+                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                >
+                  <Users className="w-5 h-5 shrink-0" />
+                  {!collapsed && <span>Gestión de Usuarios</span>}
+                </button>
+              </>
+            )}
           </nav>
         </div>
 
@@ -229,7 +287,7 @@ function AppContent() {
               {!collapsed && (
                 <div className="text-left min-w-0">
                   <p className="text-xs font-bold text-brandText-title truncate max-w-[110px] leading-tight">{currentUser.name}</p>
-                  <p className="text-[9px] text-brandText-disabled font-semibold uppercase leading-none mt-0.5">{currentUser.role}</p>
+                  <p className="text-[9px] text-brandText-disabled font-semibold uppercase leading-none mt-0.5">{getRoleLabel()}</p>
                 </div>
               )}
             </div>
@@ -321,9 +379,9 @@ function AppContent() {
             </>
           )}
 
-          {currentUser.role === 'OWNER' && <OwnerView />}
+          {currentUser.role === 'OWNER' && <OwnerView activeTab={ownerTab} />}
 
-          {currentUser.role === 'ADMIN' && <AdminView />}
+          {currentUser.role === 'ADMIN' && <AdminView activeTab={adminTab} />}
         </main>
 
         {/* MAIN FOOTER */}

@@ -1,15 +1,27 @@
 import prisma from './db.js';
 
-export const getAdminMetrics = async () => {
+export const getAdminMetrics = async (restaurantId = null) => {
+  const tableWhere = restaurantId ? { restaurantId: parseInt(restaurantId) } : {};
+  const occupiedTableWhere = restaurantId 
+    ? { restaurantId: parseInt(restaurantId), status: 'OCCUPIED' }
+    : { status: 'OCCUPIED' };
+
   const occupiedTables = await prisma.table.findMany({
-    where: { status: 'OCCUPIED' },
+    where: occupiedTableWhere,
   });
   const totalClientsToday = occupiedTables.reduce((acc, curr) => acc + curr.capacity, 0);
 
-  const reservations = await prisma.reservation.findMany();
+  const reservationWhere = restaurantId 
+    ? { table: { restaurantId: parseInt(restaurantId) } }
+    : {};
+  const reservations = await prisma.reservation.findMany({
+    where: reservationWhere,
+  });
   const totalEarnings = reservations.reduce((acc, curr) => acc + curr.cost, 0);
 
-  const allTables = await prisma.table.findMany();
+  const allTables = await prisma.table.findMany({
+    where: tableWhere,
+  });
   const totalTables = allTables.length;
   const occupiedCount = allTables.filter(t => t.status === 'OCCUPIED').length;
   const averageOccupancy = totalTables > 0 ? (occupiedCount / totalTables) * 100 : 0;

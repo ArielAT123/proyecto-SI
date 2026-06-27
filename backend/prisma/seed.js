@@ -68,6 +68,7 @@ async function main() {
       location: 'Palermo, CABA',
       foodType: 'Carnes / Parrilla',
       photo: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
+      ownerId: owner.id,
     },
   });
 
@@ -77,6 +78,7 @@ async function main() {
       location: 'Av. Corrientes, CABA',
       foodType: 'Pizzas / Empanadas',
       photo: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80',
+      ownerId: owner.id,
     },
   });
 
@@ -86,6 +88,7 @@ async function main() {
       location: 'Villa Crespo, CABA',
       foodType: 'Comida Armenia / Oriente Medio',
       photo: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=600&q=80',
+      ownerId: owner.id,
     },
   });
 

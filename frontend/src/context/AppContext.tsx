@@ -75,8 +75,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       
-      // Load public list of restaurants
-      const restRes = await fetch(`${API_URL}/api/restaurants`);
+      const storedToken = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (storedToken) {
+        headers['Authorization'] = `Bearer ${storedToken}`;
+      }
+      
+      // Load list of restaurants
+      const restRes = await fetch(`${API_URL}/api/restaurants`, { headers });
       if (restRes.ok) {
         const restData = await restRes.json();
         setRestaurants(restData);
@@ -90,7 +96,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // If token exists, load user profile
-      const storedToken = localStorage.getItem('token');
       if (storedToken) {
         const userRes = await fetch(`${API_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${storedToken}` },
@@ -224,7 +229,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Refresh restaurants list
   const refreshRestaurants = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/restaurants`);
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(`${API_URL}/api/restaurants`, { headers });
       if (res.ok) {
         const data = await res.json();
         setRestaurants(data);

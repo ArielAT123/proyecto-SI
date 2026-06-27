@@ -26,6 +26,7 @@ model User {
   role         Role          @default(CLIENT)
   balance      Float         @default(100.0) // Virtual Wallet balance
   reservations Reservation[]
+  restaurants  Restaurant[]  // Restaurants owned by this user
   createdAt    DateTime      @default(now())
 }
 
@@ -35,6 +36,8 @@ model Restaurant {
   location  String
   photo     String
   foodType  String
+  ownerId   Int?
+  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   tables    Table[]
   ads       Ad[]
   createdAt DateTime @default(now())

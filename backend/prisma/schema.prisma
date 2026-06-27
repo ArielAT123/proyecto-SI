@@ -1,0 +1,75 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CLIENT
+  OWNER
+  ADMIN
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  name         String
+  password     String
+  role         Role          @default(CLIENT)
+  balance      Float         @default(100.0) // Virtual Wallet balance
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+}
+
+model Restaurant {
+  id        Int      @id @default(autoincrement())
+  name      String
+  location  String
+  photo     String
+  foodType  String
+  tables    Table[]
+  ads       Ad[]
+  createdAt DateTime @default(now())
+}
+
+model Table {
+  id           Int           @id @default(autoincrement())
+  restaurantId Int
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  number       Int
+  capacity     Int
+  status       TableStatus   @default(AVAILABLE)
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+}
+
+model Reservation {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tableId   Int
+  table     Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  startTime String
+  endTime   String?
+  cost      Float
+  createdAt DateTime @default(now())
+}
+
+model Ad {
+  id           Int        @id @default(autoincrement())
+  restaurantId Int
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  title        String
+  image        String
+  redirectUrl  String?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+}

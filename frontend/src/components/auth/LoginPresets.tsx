@@ -15,9 +15,9 @@ export default function LoginPresets({ loading, onQuickLogin }: LoginPresetsProp
   ];
 
   return (
-    <div className="pt-4 border-t border-slate-850">
-      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1">
-        <ShieldAlert className="w-3.5 h-3.5 text-indigo-400" />
+    <div className="pt-4 border-t border-brand-border">
+      <h4 className="text-[10px] font-bold text-brandText-disabled uppercase tracking-widest mb-3 flex items-center gap-1">
+        <ShieldAlert className="w-3.5 h-3.5 text-brand-primary" />
         Acceso Rápido de Prueba (Simulado)
       </h4>
       <div className="grid grid-cols-2 gap-2">
@@ -27,7 +27,7 @@ export default function LoginPresets({ loading, onQuickLogin }: LoginPresetsProp
             type="button"
             disabled={loading}
             onClick={() => onQuickLogin(preset.email)}
-            className="p-2.5 bg-slate-950 hover:bg-indigo-600/10 border border-slate-850 hover:border-indigo-500/30 text-left rounded-xl transition-all text-xs text-slate-300 font-semibold truncate hover:text-white"
+            className="p-2.5 bg-brand-bg hover:bg-brand-primary/5 border border-brand-border hover:border-brand-primary/30 text-left rounded-xl transition-all text-xs text-brandText-body font-semibold truncate hover:text-brand-primary"
           >
             {preset.label}
           </button>

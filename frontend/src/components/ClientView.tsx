@@ -4,24 +4,40 @@ import { Restaurant } from '../types';
 import ClientAdBanner from './client/ClientAdBanner';
 import ClientFilterBar from './client/ClientFilterBar';
 import RestaurantCard from './client/RestaurantCard';
-import BookingModal from './client/BookingModal';
 import { Utensils } from 'lucide-react';
 
 interface ClientViewProps {
   onNavigateToWallet: () => void;
+  selectedRestaurant: Restaurant | null;
+  setSelectedRestaurant: (val: Restaurant | null) => void;
+  selectedTable: any | null;
+  setSelectedTable: (val: any | null) => void;
+  bookingTime: string;
+  setBookingTime: (val: string) => void;
+  errorMsg: string;
+  setErrorMsg: (val: string) => void;
+  successMsg: string;
+  setSuccessMsg: (val: string) => void;
 }
 
-export default function ClientView({ onNavigateToWallet }: ClientViewProps) {
+export default function ClientView({
+  onNavigateToWallet,
+  selectedRestaurant,
+  setSelectedRestaurant,
+  selectedTable,
+  setSelectedTable,
+  bookingTime,
+  setBookingTime,
+  errorMsg,
+  setErrorMsg,
+  successMsg,
+  setSuccessMsg,
+}: ClientViewProps) {
   const { restaurants, activeAds, API_URL } = useApp();
   
   // Shared States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFoodType, setSelectedFoodType] = useState('Todos');
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
-  const [selectedTable, setSelectedTable] = useState<any | null>(null);
-  const [bookingTime, setBookingTime] = useState('20:00');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   // Food types list
   const foodTypes = ['Todos', ...new Set(restaurants.map((r) => r.foodType))];
@@ -86,24 +102,6 @@ export default function ClientView({ onNavigateToWallet }: ClientViewProps) {
           </div>
         )}
       </div>
-
-      {/* 4. DETAIL AND RESERVATION MODAL */}
-      {selectedRestaurant && (
-        <BookingModal
-          selectedRestaurant={selectedRestaurant}
-          setSelectedRestaurant={setSelectedRestaurant}
-          selectedTable={selectedTable}
-          setSelectedTable={setSelectedTable}
-          bookingTime={bookingTime}
-          setBookingTime={setBookingTime}
-          errorMsg={errorMsg}
-          setErrorMsg={setErrorMsg}
-          successMsg={successMsg}
-          setSuccessMsg={setSuccessMsg}
-          onNavigateToWallet={onNavigateToWallet}
-          onRefreshDetail={handleOpenDetail}
-        />
-      )}
     </div>
   );
 }

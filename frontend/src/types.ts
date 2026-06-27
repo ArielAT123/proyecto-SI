@@ -31,6 +31,7 @@ export interface Table {
   number: number;
   capacity: number;
   status: TableStatus;
+  preview?: string | null;
   reservations?: Reservation[];
   restaurant?: Restaurant;
   createdAt: string;

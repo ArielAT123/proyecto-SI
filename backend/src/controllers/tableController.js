@@ -4,13 +4,13 @@ export const create = async (req, res) => {
   if (req.user.role !== 'OWNER' && req.user.role !== 'ADMIN') {
     return res.status(403).json({ error: 'Acceso denegado' });
   }
-  const { number, capacity } = req.body;
+  const { number, capacity, preview } = req.body;
   const restaurantId = parseInt(req.params.id);
   if (!number || !capacity) {
     return res.status(400).json({ error: 'Número y capacidad son requeridos' });
   }
   try {
-    const table = await tableService.addTable(req.io, restaurantId, number, capacity);
+    const table = await tableService.addTable(req.io, restaurantId, number, capacity, preview);
     res.json(table);
   } catch (error) {
     res.status(500).json({ error: error.message });

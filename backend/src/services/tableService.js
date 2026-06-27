@@ -1,13 +1,14 @@
 import prisma from './db.js';
 import { broadcastTableUpdate } from './socketService.js';
 
-export const addTable = async (io, restaurantId, number, capacity) => {
+export const addTable = async (io, restaurantId, number, capacity, preview) => {
   const table = await prisma.table.create({
     data: {
       restaurantId: parseInt(restaurantId),
       number: parseInt(number),
       capacity: parseInt(capacity),
       status: 'AVAILABLE',
+      preview: preview || null,
     },
   });
 

@@ -23,7 +23,7 @@ export default function ClientAdBanner({ activeAds, restaurants, onOpenDetail }:
   if (activeAds.length === 0) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl h-56 md:h-64 shadow-xl border border-slate-800 bg-slate-900 group">
+    <div className="relative overflow-hidden rounded-[16px] h-56 md:h-64 shadow-brandCard border border-brand-borderCard bg-brand-card group">
       <div 
         className="flex transition-transform duration-700 ease-in-out h-full"
         style={{ transform: `translateX(-${activeAdIndex * 100}%)` }}
@@ -41,16 +41,16 @@ export default function ClientAdBanner({ activeAds, restaurants, onOpenDetail }:
             <img 
               src={ad.image} 
               alt={ad.title} 
-              className="w-full h-full object-cover brightness-50 group-hover:scale-105 transition-transform duration-700"
+              className="w-full h-full object-cover brightness-[0.45] group-hover:scale-105 transition-transform duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent flex flex-col justify-end p-6 md:p-8">
-              <span className="bg-indigo-600/80 text-xs font-semibold px-2.5 py-1 rounded-full text-indigo-100 uppercase tracking-wider w-max mb-2 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#202124] via-[#202124]/30 to-transparent flex flex-col justify-end p-6 md:p-8">
+              <span className="bg-brand-primary/95 text-xs font-semibold px-2.5 py-1 rounded-full text-white uppercase tracking-wider w-max mb-2 backdrop-blur-sm shadow-sm">
                 {ad.restaurant?.name || 'Promoción Especial'}
               </span>
               <h3 className="text-xl md:text-2xl font-bold text-white tracking-tight leading-snug max-w-2xl">
                 {ad.title}
               </h3>
-              <p className="text-slate-400 text-xs md:text-sm mt-1 flex items-center gap-1 group-hover:text-indigo-400 transition-colors">
+              <p className="text-slate-350 text-xs md:text-sm mt-1 flex items-center gap-1 group-hover:text-brand-secondary transition-colors">
                 Hacer clic para reservar mesa ahora <ArrowRight className="w-4 h-4" />
               </p>
             </div>
@@ -66,7 +66,7 @@ export default function ClientAdBanner({ activeAds, restaurants, onOpenDetail }:
               key={idx}
               onClick={() => setActiveAdIndex(idx)}
               className={`w-2.5 h-2.5 rounded-full transition-all ${
-                activeAdIndex === idx ? 'bg-indigo-500 w-6' : 'bg-slate-600 hover:bg-slate-400'
+                activeAdIndex === idx ? 'bg-brand-primary w-6' : 'bg-white/50 hover:bg-white/80'
               }`}
             />
           ))}

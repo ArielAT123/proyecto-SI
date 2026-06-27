@@ -5,9 +5,13 @@ import OwnerTableGrid from './owner/OwnerTableGrid';
 import OwnerTableForm from './owner/OwnerTableForm';
 import OwnerAdForm from './owner/OwnerAdForm';
 import OwnerAdList from './owner/OwnerAdList';
-import { Settings } from 'lucide-react';
+import { Settings, Layers, Megaphone } from 'lucide-react';
 
-export default function OwnerView() {
+interface OwnerViewProps {
+  activeTab: 'tables' | 'ads';
+}
+
+export default function OwnerView({ activeTab }: OwnerViewProps) {
   const { restaurants, API_URL, refreshRestaurants, refreshAds, authFetch } = useApp();
   const [selectedRestId, setSelectedRestId] = useState('');
   const [restaurantData, setRestaurantData] = useState<Restaurant | null>(null);
@@ -103,22 +107,22 @@ export default function OwnerView() {
     <div className="space-y-8 pb-16">
       
       {/* 1. RESTAURANT SELECTOR */}
-      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-brand-card border border-brand-borderCard rounded-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-brandCard">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Settings className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-xl font-bold text-brandText-title flex items-center gap-2">
+            <Settings className="w-5 h-5 text-brand-primary" />
             Panel de Operador del Restaurante
           </h2>
-          <p className="text-slate-400 text-xs mt-1">
+          <p className="text-brandText-body text-xs mt-1">
             Gestión en tiempo real de la disponibilidad de las mesas de tu local y campañas publicitarias.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-sm font-semibold text-slate-300">Seleccionar Local:</label>
+          <label className="text-sm font-semibold text-brandText-subtitle">Seleccionar Local:</label>
           <select
             value={selectedRestId}
             onChange={(e) => setSelectedRestId(e.target.value)}
-            className="bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 font-semibold"
+            className="bg-white border border-brand-borderInput text-brandText-title rounded-input px-4 py-2.5 focus:outline-none focus:border-brand-primary font-semibold transition-colors hover:border-brand-primary cursor-pointer"
           >
             {restaurants.map((r) => (
               <option key={r.id} value={r.id}>
@@ -129,37 +133,49 @@ export default function OwnerView() {
         </div>
       </div>
 
+
+
       {restaurantData ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* LEFT: GRID DE MESAS */}
-          <div className="lg:col-span-2 space-y-6">
-            <OwnerTableGrid
-              restaurantData={restaurantData}
-              onToggleTable={handleToggleTable}
-              onDeleteTable={handleDeleteTable}
-            />
+        <>
+          {activeTab === 'tables' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* LEFT: GRID DE MESAS */}
+              <div className="lg:col-span-2">
+                <OwnerTableGrid
+                  restaurantData={restaurantData}
+                  onToggleTable={handleToggleTable}
+                  onDeleteTable={handleDeleteTable}
+                />
+              </div>
 
-            <OwnerTableForm
-              selectedRestId={selectedRestId}
-              onRefreshDetails={loadRestaurantDetails}
-            />
-          </div>
+              {/* RIGHT: AGREGAR MESA FORM */}
+              <div className="lg:col-span-1">
+                <OwnerTableForm
+                  selectedRestId={selectedRestId}
+                  onRefreshDetails={loadRestaurantDetails}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* LEFT: CREAR CAMPAÑA FORM */}
+              <div className="lg:col-span-1">
+                <OwnerAdForm
+                  selectedRestId={selectedRestId}
+                  onRefreshDetails={loadRestaurantDetails}
+                />
+              </div>
 
-          {/* RIGHT: CAMPAIGN / PUBLICIDAD MANAGER */}
-          <div className="lg:col-span-1 space-y-6">
-            <OwnerAdForm
-              selectedRestId={selectedRestId}
-              onRefreshDetails={loadRestaurantDetails}
-            />
-
-            <OwnerAdList
-              adList={adList}
-              onToggleAd={handleToggleAd}
-            />
-          </div>
-
-        </div>
+              {/* RIGHT: HISTORIAL DE CAMPAÑAS */}
+              <div className="lg:col-span-2">
+                <OwnerAdList
+                  adList={adList}
+                  onToggleAd={handleToggleAd}
+                />
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-12">Cargando datos del local...</div>
       )}

@@ -11,6 +11,7 @@ export default function OwnerTableForm({ selectedRestId, onRefreshDetails }: Own
   const { API_URL, refreshRestaurants, authFetch } = useApp();
   const [tableNumber, setTableNumber] = useState('');
   const [tableCapacity, setTableCapacity] = useState('4');
+  const [tablePreview, setTablePreview] = useState('');
   const [success, setSuccess] = useState('');
 
   const handleAddTable = async (e: React.FormEvent) => {
@@ -24,11 +25,13 @@ export default function OwnerTableForm({ selectedRestId, onRefreshDetails }: Own
         body: JSON.stringify({
           number: parseInt(tableNumber),
           capacity: parseInt(tableCapacity),
+          preview: tablePreview || null,
         }),
       });
       if (res.ok) {
         setSuccess('Mesa añadida correctamente.');
         setTableNumber('');
+        setTablePreview('');
         await onRefreshDetails();
         await refreshRestaurants();
         setTimeout(() => setSuccess(''), 3000);
@@ -39,48 +42,62 @@ export default function OwnerTableForm({ selectedRestId, onRefreshDetails }: Own
   };
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-lg">
-      <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-        <Settings className="w-5 h-5 text-indigo-400" />
+    <div className="bg-brand-card border border-brand-borderCard rounded-card p-6 shadow-brandCard">
+      <h3 className="text-base font-bold text-brandText-title mb-4 flex items-center gap-2">
+        <Settings className="w-5 h-5 text-brand-primary" />
         Configurar Piso: Agregar Mesa
       </h3>
 
       {success && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-3 rounded-xl text-xs mb-4 flex items-center gap-2">
+        <div className="bg-brand-accent/10 border border-brand-accent/20 text-brand-accent p-3 rounded-xl text-xs mb-4 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
-      <form onSubmit={handleAddTable} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+      <form onSubmit={handleAddTable} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-brandText-subtitle uppercase tracking-wider mb-2">Número de Mesa</label>
+            <input
+              type="number"
+              required
+              min="1"
+              placeholder="Ej: 6"
+              value={tableNumber}
+              onChange={(e) => setTableNumber(e.target.value)}
+              className="w-full bg-white border border-brand-borderInput text-brandText-title rounded-input px-4 py-2.5 outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary hover:border-brand-primary transition-colors placeholder:text-brandText-disabled"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-brandText-subtitle uppercase tracking-wider mb-2">Capacidad (Personas)</label>
+            <select
+              value={tableCapacity}
+              onChange={(e) => setTableCapacity(e.target.value)}
+              className="w-full bg-white border border-brand-borderInput text-brandText-title rounded-input px-4 py-2.5 outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary hover:border-brand-primary transition-colors cursor-pointer"
+            >
+              <option value="2">2 Personas (Mesa Chica)</option>
+              <option value="4">4 Personas (Mesa Mediana)</option>
+              <option value="6">6 Personas (Mesa Grande)</option>
+              <option value="8">8 Personas (Mesa Grupal)</option>
+            </select>
+          </div>
+        </div>
+
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Número de Mesa</label>
+          <label className="block text-xs font-semibold text-brandText-subtitle uppercase tracking-wider mb-2">Imagen Preview de la Mesa (URL)</label>
           <input
-            type="number"
-            required
-            min="1"
-            placeholder="Ej: 6"
-            value={tableNumber}
-            onChange={(e) => setTableNumber(e.target.value)}
-            className="w-full bg-slate-950/60 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors"
+            type="text"
+            placeholder="https://images.unsplash.com/..."
+            value={tablePreview}
+            onChange={(e) => setTablePreview(e.target.value)}
+            className="w-full bg-white border border-brand-borderInput text-brandText-title rounded-input px-4 py-2.5 outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary hover:border-brand-primary transition-colors placeholder:text-brandText-disabled text-sm"
           />
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Capacidad (Personas)</label>
-          <select
-            value={tableCapacity}
-            onChange={(e) => setTableCapacity(e.target.value)}
-            className="w-full bg-slate-950/60 border border-slate-800 text-slate-100 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 transition-colors"
-          >
-            <option value="2">2 Personas (Mesa Chica)</option>
-            <option value="4">4 Personas (Mesa Mediana)</option>
-            <option value="6">6 Personas (Mesa Grande)</option>
-            <option value="8">8 Personas (Mesa Grupal)</option>
-          </select>
-        </div>
+
         <button
           type="submit"
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+          className="w-full bg-brand-primary hover:bg-brand-primaryHover active:bg-brand-primaryActive text-white font-semibold py-3 rounded-btn transition-all shadow-brandCard flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Agregar Mesa

@@ -94,31 +94,31 @@ async function main() {
   // 4. Create Tables for Parrilla Don Julio
   await prisma.table.createMany({
     data: [
-      { restaurantId: rest1.id, number: 1, capacity: 2, status: 'AVAILABLE' },
-      { restaurantId: rest1.id, number: 2, capacity: 2, status: 'OCCUPIED' },
-      { restaurantId: rest1.id, number: 3, capacity: 4, status: 'AVAILABLE' },
-      { restaurantId: rest1.id, number: 4, capacity: 4, status: 'AVAILABLE' },
-      { restaurantId: rest1.id, number: 5, capacity: 6, status: 'OCCUPIED' },
+      { restaurantId: rest1.id, number: 1, capacity: 2, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?w=300&q=80' },
+      { restaurantId: rest1.id, number: 2, capacity: 2, status: 'OCCUPIED', preview: 'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?w=300&q=80' },
+      { restaurantId: rest1.id, number: 3, capacity: 4, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&q=80' },
+      { restaurantId: rest1.id, number: 4, capacity: 4, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&q=80' },
+      { restaurantId: rest1.id, number: 5, capacity: 6, status: 'OCCUPIED', preview: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300&q=80' },
     ],
   });
 
   // Create Tables for Pizzería Güerrín
   await prisma.table.createMany({
     data: [
-      { restaurantId: rest2.id, number: 1, capacity: 2, status: 'AVAILABLE' },
-      { restaurantId: rest2.id, number: 2, capacity: 4, status: 'AVAILABLE' },
-      { restaurantId: rest2.id, number: 3, capacity: 4, status: 'OCCUPIED' },
-      { restaurantId: rest2.id, number: 4, capacity: 6, status: 'AVAILABLE' },
+      { restaurantId: rest2.id, number: 1, capacity: 2, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?w=300&q=80' },
+      { restaurantId: rest2.id, number: 2, capacity: 4, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&q=80' },
+      { restaurantId: rest2.id, number: 3, capacity: 4, status: 'OCCUPIED', preview: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&q=80' },
+      { restaurantId: rest2.id, number: 4, capacity: 6, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300&q=80' },
     ],
   });
 
   // Create Tables for Sarkis
   await prisma.table.createMany({
     data: [
-      { restaurantId: rest3.id, number: 1, capacity: 2, status: 'AVAILABLE' },
-      { restaurantId: rest3.id, number: 2, capacity: 2, status: 'AVAILABLE' },
-      { restaurantId: rest3.id, number: 3, capacity: 4, status: 'AVAILABLE' },
-      { restaurantId: rest3.id, number: 4, capacity: 8, status: 'AVAILABLE' },
+      { restaurantId: rest3.id, number: 1, capacity: 2, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?w=300&q=80' },
+      { restaurantId: rest3.id, number: 2, capacity: 2, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?w=300&q=80' },
+      { restaurantId: rest3.id, number: 3, capacity: 4, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&q=80' },
+      { restaurantId: rest3.id, number: 4, capacity: 8, status: 'AVAILABLE', preview: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300&q=80' },
     ],
   });
 

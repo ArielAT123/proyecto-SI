@@ -9,9 +9,9 @@ interface OwnerAdListProps {
 
 export default function OwnerAdList({ adList, onToggleAd }: OwnerAdListProps) {
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
-      <h3 className="text-base font-bold text-white flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-indigo-400" />
+    <div className="bg-brand-card border border-brand-borderCard rounded-card p-6 shadow-brandCard space-y-4">
+      <h3 className="text-base font-bold text-brandText-title flex items-center gap-2">
+        <Sparkles className="w-5 h-5 text-brand-primary" />
         Historial de Campañas
       </h3>
       
@@ -20,17 +20,17 @@ export default function OwnerAdList({ adList, onToggleAd }: OwnerAdListProps) {
           adList.map((ad) => (
             <div
               key={ad.id}
-              className="p-3.5 bg-slate-950/60 border border-slate-850 rounded-xl flex items-center justify-between gap-3"
+              className="p-3.5 bg-white border border-brand-border rounded-xl flex items-center justify-between gap-3"
             >
               <div className="flex items-center gap-2.5 overflow-hidden">
                 <img
                   src={ad.image}
                   alt={ad.title}
-                  className="w-10 h-10 object-cover rounded-lg shrink-0 border border-slate-800"
+                  className="w-10 h-10 object-cover rounded-lg shrink-0 border border-brand-border"
                 />
                 <div className="overflow-hidden">
-                  <h4 className="font-bold text-xs text-white truncate leading-snug">{ad.title}</h4>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
+                  <h4 className="font-bold text-xs text-brandText-title truncate leading-snug">{ad.title}</h4>
+                  <p className="text-[10px] text-brandText-disabled mt-0.5">
                     Creado: {new Date(ad.createdAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -38,18 +38,18 @@ export default function OwnerAdList({ adList, onToggleAd }: OwnerAdListProps) {
 
               <button
                 onClick={() => onToggleAd(ad.id)}
-                className="text-slate-400 hover:text-white shrink-0"
+                className="text-brandText-disabled hover:text-brandText-subtitle shrink-0"
               >
                 {ad.isActive ? (
-                  <ToggleRight className="w-8 h-8 text-indigo-500" />
+                  <ToggleRight className="w-8 h-8 text-brand-primary" />
                 ) : (
-                  <ToggleLeft className="w-8 h-8 text-slate-700" />
+                  <ToggleLeft className="w-8 h-8 text-brandText-disabled" />
                 )}
               </button>
             </div>
           ))
         ) : (
-          <div className="text-center py-6 text-slate-500 text-xs">
+          <div className="text-center py-6 text-brandText-disabled text-xs">
             No has creado ninguna campaña.
           </div>
         )}

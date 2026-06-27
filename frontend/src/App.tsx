@@ -386,8 +386,7 @@ function AppContent() {
 
         {/* MAIN FOOTER */}
         <footer className="bg-brand-footer text-slate-400 py-6 text-center text-xs">
-          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>© 2026 AforoGo! S.A. Todos los derechos reservados.</p>
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <div className="flex items-center gap-4 text-slate-500">
               <span className="hover:text-slate-350 cursor-pointer">Términos</span>
               <span>•</span>

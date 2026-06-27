@@ -11,4 +11,7 @@ export default defineConfig({
       usePolling: true,
     },
   },
+  preview: {
+    allowedHosts: ['proyecto-si-4dgx.onrender.com'],
+  },
 });

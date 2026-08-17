@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Metrics, Restaurant } from '../types';
 import AdminKpiCards from './admin/AdminKpiCards';
 import AdminPeakHoursChart from './admin/AdminPeakHoursChart';
+import AdminGeneralDashboard from './admin/AdminGeneralDashboard';
 import { 
   RefreshCw, 
   BarChart3, 
@@ -258,118 +259,10 @@ export default function AdminView({ activeTab }: AdminViewProps) {
     <div className="space-y-8 pb-16">
       
       {/* ======================================================== */}
-      {/* 1. STATS TAB */}
+      {/* 1. STATS TAB - GENERAL DASHBOARD */}
       {/* ======================================================== */}
       {activeTab === 'stats' && (
-        <div className="space-y-6">
-          {/* HEADER & FILTER BAR */}
-          <div className="bg-brand-card border border-brand-borderCard rounded-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-brandCard">
-            <div>
-              <h2 className="text-xl font-bold text-brandText-title flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-brand-primary" />
-                Estadísticas Globales y por Local
-              </h2>
-              <p className="text-brandText-body text-xs mt-1">
-                Visualización de afluencia, ocupación y facturación total del sistema.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Restaurant Selector Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-brandText-subtitle">Filtrar Local:</span>
-                <select
-                  value={selectedRestId}
-                  onChange={handleStatsFilterChange}
-                  className="bg-white border border-brand-borderInput text-brandText-title text-xs rounded-input px-3 py-2 font-semibold outline-none focus:border-brand-primary cursor-pointer"
-                >
-                  <option value="">Todos los Locales (Global)</option>
-                  {restaurants.map((rest) => (
-                    <option key={rest.id} value={rest.id}>
-                      {rest.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Timeframe selector */}
-              <div className="bg-brand-bg p-1 rounded-xl border border-brand-border flex gap-1">
-                {(['Hoy', 'Semana', 'Mes'] as const).map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setActiveRange(range)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      activeRange === range
-                        ? 'bg-brand-primary text-white shadow-brandCard'
-                        : 'text-brandText-disabled hover:text-brandText-subtitle'
-                    }`}
-                  >
-                    {range}
-                  </button>
-                ))}
-              </div>
-
-              {/* Refresh Button */}
-              <button
-                onClick={handleRefreshStats}
-                disabled={loadingMetrics}
-                className="p-2.5 bg-brand-bg hover:bg-brand-border border border-brand-border text-brandText-body rounded-xl transition-all disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={`w-4 h-4 ${loadingMetrics ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-          </div>
-
-          {loadingMetrics ? (
-            <div className="text-center py-20 flex flex-col items-center justify-center">
-              <svg className="animate-spin h-10 w-10 text-brand-primary mb-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              <span className="text-brandText-subtitle text-sm">Cargando analítica...</span>
-            </div>
-          ) : activeMetrics ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* KPI CARDS GRID */}
-              <AdminKpiCards activeMetrics={activeMetrics} />
-
-              {/* PEAK HOURS CHART CONTAINER */}
-              <AdminPeakHoursChart activeMetrics={activeMetrics} />
-
-              {/* GENERAL INSIGHTS & RECOMMENDATIONS */}
-              <div className="lg:col-span-1 bg-brand-card border border-brand-borderCard rounded-card p-6 shadow-brandCard flex flex-col justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-brandText-title mb-4">Informes e Insights</h3>
-                  
-                  <div className="space-y-4">
-                    <div className="p-3.5 bg-brand-bg border border-brand-border rounded-xl">
-                      <h4 className="text-xs font-bold text-brand-primary uppercase tracking-wider">Afluencia Promedio</h4>
-                      <p className="text-brandText-body text-xs mt-1 text-justify">
-                        Los clientes suelen reservar con mayor frecuencia para el horario nocturno. Incentiva las campañas de almuerzo con descuentos dinámicos.
-                      </p>
-                    </div>
-
-                    <div className="p-3.5 bg-brand-bg border border-brand-border rounded-xl">
-                      <h4 className="text-xs font-bold text-brand-accent uppercase tracking-wider">Rendimiento publicitario</h4>
-                      <p className="text-brandText-body text-xs mt-1 text-justify">
-                        El número de reservas aumenta un **30%** en los locales que mantienen activas al menos dos campañas de publicidad vigentes por semana.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-6 mt-6 border-t border-brand-border text-[10px] text-brandText-disabled flex items-center gap-1">
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>Cómputos automáticos basados en estado del piso e historial de cobros.</span>
-                </div>
-              </div>
-
-            </div>
-          ) : (
-            <div className="text-center py-12 text-brandText-disabled">Error cargando métricas. Inténtelo de nuevo.</div>
-          )}
-        </div>
+        <AdminGeneralDashboard />
       )}
 
       {/* ======================================================== */}

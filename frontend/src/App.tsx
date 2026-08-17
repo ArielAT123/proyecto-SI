@@ -11,7 +11,7 @@ import aforoGoIcon from './assets/aforoGo_icon.png';
 import { Restaurant } from './types';
 
 function AppContent() {
-  const { currentUser, token, logout, loading } = useApp();
+  const { API_URL, currentUser, token, logout, loading } = useApp();
   const [clientTab, setClientTab] = useState<'home' | 'wallet'>('home');
   const [ownerTab, setOwnerTab] = useState<'tables' | 'ads'>('tables');
   const [adminTab, setAdminTab] = useState<'stats' | 'locales' | 'users'>('stats');

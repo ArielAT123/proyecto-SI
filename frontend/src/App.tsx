@@ -70,12 +70,12 @@ function AppContent() {
 
   const sidebarContent = (isMobile: boolean) => {
     const collapsed = !isMobile && isSidebarCollapsed;
-    
+
     return (
       <div className="flex flex-col h-full justify-between p-4 relative">
         {/* Brand logo & Profile section */}
         <div className="space-y-6">
-          
+
           {/* Logo & Toggle Button */}
           <div className="flex items-center justify-between pt-2">
             <div className={`flex flex-col items-center mx-auto transition-all ${collapsed ? 'w-12 h-12' : 'w-24 h-24'}`}>
@@ -120,11 +120,10 @@ function AppContent() {
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title="Restaurantes"
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
-                    clientTab === 'home'
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${clientTab === 'home'
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
-                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                    } ${collapsed ? 'justify-center' : 'justify-start'}`}
                 >
                   <Store className="w-5 h-5 shrink-0" />
                   {!collapsed && <span>Restaurantes</span>}
@@ -135,26 +134,24 @@ function AppContent() {
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title="Billetera y Reservas"
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
-                    clientTab === 'wallet'
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${clientTab === 'wallet'
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
-                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                    } ${collapsed ? 'justify-center' : 'justify-start'}`}
                 >
                   <Wallet className="w-5 h-5 shrink-0" />
                   {!collapsed && <span>Billetera y Reservas</span>}
                 </button>
 
                 {/* Wallet Balance Badge */}
-                <div 
+                <div
                   onClick={() => {
                     setClientTab('wallet');
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title={`Saldo: $${currentUser.balance.toFixed(2)}`}
-                  className={`mt-4 bg-brand-primary/5 hover:bg-brand-primary/10 border border-brand-primary/20 px-3 py-3 rounded-xl flex items-center cursor-pointer transition-all hover:scale-[1.02] ${
-                    collapsed ? 'justify-center' : 'justify-between'
-                  }`}
+                  className={`mt-4 bg-brand-primary/5 hover:bg-brand-primary/10 border border-brand-primary/20 px-3 py-3 rounded-xl flex items-center cursor-pointer transition-all hover:scale-[1.02] ${collapsed ? 'justify-center' : 'justify-between'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-brand-primary shrink-0" />
@@ -172,11 +169,10 @@ function AppContent() {
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title="Gestión de Mesas"
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
-                    ownerTab === 'tables'
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${ownerTab === 'tables'
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
-                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                    } ${collapsed ? 'justify-center' : 'justify-start'}`}
                 >
                   <Layers className="w-5 h-5 shrink-0" />
                   {!collapsed && <span>Gestión de Mesas</span>}
@@ -187,11 +183,10 @@ function AppContent() {
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title="Campañas de Publicidad"
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
-                    ownerTab === 'ads'
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${ownerTab === 'ads'
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
-                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                    } ${collapsed ? 'justify-center' : 'justify-start'}`}
                 >
                   <Megaphone className="w-5 h-5 shrink-0" />
                   {!collapsed && <span>Campañas de Publicidad</span>}
@@ -206,11 +201,10 @@ function AppContent() {
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title="Estadísticas"
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
-                    adminTab === 'stats'
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${adminTab === 'stats'
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
-                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                    } ${collapsed ? 'justify-center' : 'justify-start'}`}
                 >
                   <BarChart3 className="w-5 h-5 shrink-0" />
                   {!collapsed && <span>Estadísticas</span>}
@@ -221,11 +215,10 @@ function AppContent() {
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title="Gestión de Locales"
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
-                    adminTab === 'locales'
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${adminTab === 'locales'
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
-                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                    } ${collapsed ? 'justify-center' : 'justify-start'}`}
                 >
                   <Store className="w-5 h-5 shrink-0" />
                   {!collapsed && <span>Gestión de Locales</span>}
@@ -236,11 +229,10 @@ function AppContent() {
                     if (isMobile) setIsSidebarOpen(false);
                   }}
                   title="Gestión de Usuarios"
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${
-                    adminTab === 'users'
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-all ${adminTab === 'users'
                       ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/10'
                       : 'text-brandText-subtitle hover:text-brand-primary hover:bg-brand-primary/5'
-                  } ${collapsed ? 'justify-center' : 'justify-start'}`}
+                    } ${collapsed ? 'justify-center' : 'justify-start'}`}
                 >
                   <Users className="w-5 h-5 shrink-0" />
                   {!collapsed && <span>Gestión de Usuarios</span>}
@@ -253,9 +245,8 @@ function AppContent() {
         {/* User profile popover & toggle at the bottom */}
         <div className="relative">
           {isUserMenuOpen && (
-            <div className={`absolute bottom-16 bg-white border border-brand-border rounded-xl shadow-brandCard p-3 z-50 space-y-2 w-52 ${
-              collapsed ? 'left-0' : 'left-0'
-            } animate-fade-in`}>
+            <div className={`absolute bottom-16 bg-white border border-brand-border rounded-xl shadow-brandCard p-3 z-50 space-y-2 w-52 ${collapsed ? 'left-0' : 'left-0'
+              } animate-fade-in`}>
               <div className="border-b border-brand-border pb-2 text-left">
                 <p className="text-xs font-bold text-brandText-title truncate">{currentUser.name}</p>
                 <p className="text-[10px] text-brandText-disabled truncate mt-0.5">{currentUser.email}</p>
@@ -276,9 +267,8 @@ function AppContent() {
           {/* User profile card trigger */}
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className={`w-full flex items-center gap-3 p-2 hover:bg-brand-bg rounded-xl border border-transparent hover:border-brand-border transition-all ${
-              collapsed ? 'justify-center' : 'justify-between'
-            }`}
+            className={`w-full flex items-center gap-3 p-2 hover:bg-brand-bg rounded-xl border border-transparent hover:border-brand-border transition-all ${collapsed ? 'justify-center' : 'justify-between'
+              }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
@@ -301,7 +291,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-brand-bg flex flex-col md:flex-row relative">
-      
+
       {/* MOBILE HEADER BAR */}
       <div className="md:hidden flex items-center justify-between h-16 bg-brand-navbar border-b border-brand-border px-4 sticky top-0 z-30 shadow-sm">
         <button
@@ -312,7 +302,7 @@ function AppContent() {
         </button>
         <img src={aforoGoIcon} alt="AforoGo Logo" className="w-14 h-14 object-contain" />
         {currentUser.role === 'CLIENT' ? (
-          <div 
+          <div
             onClick={() => setClientTab('wallet')}
             className="flex items-center gap-1.5 bg-brand-primary/5 px-2.5 py-1.5 rounded-lg border border-brand-primary/15"
           >
@@ -326,16 +316,15 @@ function AppContent() {
 
       {/* MOBILE DRAWER OVERLAY BACKDROP */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-[#202124]/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* MOBILE DRAWER SIDEBAR CONTAINER */}
-      <div className={`fixed inset-y-0 left-0 w-64 bg-brand-navbar border-r border-brand-border z-50 md:hidden transform transition-transform duration-300 ease-in-out ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div className={`fixed inset-y-0 left-0 w-64 bg-brand-navbar border-r border-brand-border z-50 md:hidden transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <button
           onClick={() => setIsSidebarOpen(false)}
           className="absolute top-4 right-4 p-1.5 bg-brand-bg hover:bg-brand-border text-brandText-subtitle rounded-full transition-colors"
@@ -346,15 +335,14 @@ function AppContent() {
       </div>
 
       {/* DESKTOP COLLAPSIBLE SIDEBAR */}
-      <aside className={`hidden md:flex flex-col h-screen sticky top-0 bg-brand-navbar border-r border-brand-border z-20 shrink-0 transition-all duration-300 ${
-        isSidebarCollapsed ? 'w-20' : 'w-64'
-      }`}>
+      <aside className={`hidden md:flex flex-col h-screen sticky top-0 bg-brand-navbar border-r border-brand-border z-20 shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-64'
+        }`}>
         {sidebarContent(false)}
       </aside>
 
       {/* MAIN LAYOUT WRAPPER */}
       <div className="flex-1 flex flex-col justify-between min-w-0 relative">
-        
+
         {/* MAIN VIEW CONTENT */}
         <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
           {currentUser.role === 'CLIENT' && (
@@ -383,20 +371,6 @@ function AppContent() {
 
           {currentUser.role === 'ADMIN' && <AdminView activeTab={adminTab} />}
         </main>
-
-        {/* MAIN FOOTER */}
-        <footer className="bg-brand-footer text-slate-400 py-6 text-center text-xs">
-          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <div className="flex items-center gap-4 text-slate-500">
-              <span className="hover:text-slate-350 cursor-pointer">Términos</span>
-              <span>•</span>
-              <span className="hover:text-slate-350 cursor-pointer">Privacidad</span>
-              <span>•</span>
-              <span className="hover:text-slate-350 cursor-pointer">Soporte</span>
-            </div>
-          </div>
-        </footer>
-
       </div>
 
       {/* LIFTED ROOT-LEVEL BOOKING MODAL (FOR PERFECT FULL SCREEN BACKDROP BLUR) */}

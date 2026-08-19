@@ -60,9 +60,47 @@ export interface Ad {
   createdAt: string;
 }
 
+export interface AdCampaignMetric {
+  id: number;
+  title: string;
+  restaurantName: string;
+  platform: string;
+  reach: number;
+  conversions: number;
+  performancePercentage: number;
+  iconType?: string;
+}
+
+
+export interface RestaurantOccupancyMetric {
+  id: number;
+  name: string;
+  location: string;
+  foodType: string;
+  photo?: string;
+  totalTables: number;
+  occupiedTables: number;
+  availableTables: number;
+  occupancyPercentage: number;
+}
+
 export interface Metrics {
+  totalTablesCount: number;
+  occupiedTablesCount: number;
+  availableTablesCount: number;
+  averageOccupancy: number;
+  occupancyByRestaurant?: RestaurantOccupancyMetric[];
+  totalReservations: number;
+  hourlyData: { hour: string; count: number; percentage?: number }[];
+  totalClientsServed: number;
   totalClientsToday: number;
   totalEarnings: number;
-  averageOccupancy: number;
-  hourlyData: { hour: string; count: number }[];
+  averageAdPerformance: number;
+  campaigns?: AdCampaignMetric[];
+  evolution?: {
+    monthly: { labels: string[]; clients: number[]; revenue: number[] };
+    weekly: { labels: string[]; clients: number[]; revenue: number[] };
+    daily: { labels: string[]; clients: number[]; revenue: number[] };
+  };
 }
+

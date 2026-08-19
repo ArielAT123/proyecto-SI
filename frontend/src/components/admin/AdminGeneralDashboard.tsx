@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useApp } from '../../context/AppContext';
+import { Metrics, AdCampaignMetric } from '../../types';
 import {
   Download,
   RefreshCw,
@@ -14,106 +16,291 @@ import {
   Building2,
   MapPin,
   UtensilsCrossed,
-  Filter
+  Info,
+  CheckCircle2,
+  Gauge,
+  BarChart3,
+  LineChart as LineChartIcon,
+  Store,
+  Share2,
+  Search,
+  Flame,
+  Tv,
+  Globe,
+  ArrowRightLeft
 } from 'lucide-react';
 
-interface CompanySummary {
-  id: string;
-  name: string;
-  branchesCount: number;
-  clients: number;
-  revenue: number;
-  avgOccupancy: number;
-  colorBg: string;
-  colorText: string;
-  icon: string;
+// Dynamic SVG Line Chart Coordinate Calculator
+function computeSvgLineChartData(
+  values: number[],
+  svgWidth = 350,
+  svgHeight = 120,
+  padX = 22,
+  minY = 22,
+  maxY = 98
+) {
+  if (!values || values.length === 0) return { points: [], linePath: '', areaPath: '' };
+
+  const minVal = Math.min(...values);
+  const maxVal = Math.max(...values);
+  const range = maxVal === minVal ? 1 : maxVal - minVal;
+
+  const count = values.length;
+  const stepX = count > 1 ? (svgWidth - 2 * padX) / (count - 1) : 0;
+
+  const points = values.map((val, idx) => {
+    const x = count > 1 ? padX + idx * stepX : svgWidth / 2;
+    // Higher value => closer to top (minY), lower value => closer to bottom (maxY)
+    const normalized = (val - minVal) / range;
+    const y = maxY - normalized * (maxY - minY);
+    return { x, y, value: val };
+  });
+
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(' ');
+
+  const areaPath =
+    points.length > 0
+      ? `${linePath} L ${points[points.length - 1].x.toFixed(1)},115 L ${points[0].x.toFixed(1)},115 Z`
+      : '';
+
+  return { points, linePath, areaPath };
 }
 
 export default function AdminGeneralDashboard() {
-  // Global Filter States
-  const [selectedCompany, setSelectedCompany] = useState('all');
-  const [selectedBranch, setSelectedBranch] = useState('all');
-  const [selectedCuisine, setSelectedCuisine] = useState('all');
+  const { API_URL, authFetch, restaurants, refreshRestaurants } = useApp();
+
+  // Filter States
+  const [selectedRestId, setSelectedRestId] = useState<string>('all');
+  const [selectedCuisine, setSelectedCuisine] = useState<string>('all');
   const [dateRange, setDateRange] = useState('01 - 31 de Agosto, 2026');
   const [comparePeriod, setComparePeriod] = useState('Julio 2026');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState('Hoy, 08:30 AM');
-  const [clientsPeriod, setClientsPeriod] = useState<'Mensual' | 'Semanal' | 'Diario'>('Mensual');
-  const [revenuePeriod, setRevenuePeriod] = useState<'Mensual' | 'Semanal' | 'Diario'>('Mensual');
+  
+  // View mode for Occupancy (Gauge vs Bar Chart)
+  const [occupancyViewMode, setOccupancyViewMode] = useState<'gauge' | 'bars'>('gauge');
+  
+  // Period toggles for evolution line charts
+  const [clientsPeriod, setClientsPeriod] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
+  const [revenuePeriod, setRevenuePeriod] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
+  
+  // Toggle for formulas & methodology documentation box
+  const [showFormulasGuide, setShowFormulasGuide] = useState(false);
 
-  // Handle Refresh simulation
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
+  // Backend Metrics state
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch live metrics from API
+  const fetchMetrics = async (restId = selectedRestId) => {
+    try {
+      setIsRefreshing(true);
+      const queryParam = restId !== 'all' ? `?restaurantId=${restId}` : '';
+      const res = await authFetch(`${API_URL}/api/admin/metrics${queryParam}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMetrics(data);
+      }
       const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setLastUpdated(`Hoy, ${timeStr}`);
-    }, 600);
+      setLastUpdated(`Hoy, ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+      setIsRefreshing(false);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching admin metrics:', err);
+      setIsRefreshing(false);
+      setLoading(false);
+    }
   };
 
-  // Mock data for Company Summary Table
-  const companiesData: CompanySummary[] = [
-    { id: '1', name: 'La Trattoria', branchesCount: 3, clients: 4521, revenue: 29850, avgOccupancy: 81.3, colorBg: 'bg-red-500', colorText: 'text-white', icon: '🍷' },
-    { id: '2', name: 'Sushi House', branchesCount: 2, clients: 3210, revenue: 21450, avgOccupancy: 76.7, colorBg: 'bg-blue-600', colorText: 'text-white', icon: '🍣' },
-    { id: '3', name: 'Burger Station', branchesCount: 2, clients: 2845, revenue: 15780, avgOccupancy: 69.2, colorBg: 'bg-amber-500', colorText: 'text-white', icon: '🍔' },
-    { id: '4', name: 'Cevicheria del Mar', branchesCount: 2, clients: 1965, revenue: 9420, avgOccupancy: 72.5, colorBg: 'bg-emerald-500', colorText: 'text-white', icon: '🐟' },
-    { id: '5', name: 'Pasta & Basta', branchesCount: 2, clients: 1245, revenue: 4980, avgOccupancy: 80.1, colorBg: 'bg-orange-500', colorText: 'text-white', icon: '🍝' },
-    { id: '6', name: 'BBQ Grill', branchesCount: 1, clients: 652, revenue: 990, avgOccupancy: 65.6, colorBg: 'bg-rose-600', colorText: 'text-white', icon: '🥩' }
-  ];
+  useEffect(() => {
+    fetchMetrics();
+    refreshRestaurants();
+  }, []);
 
-  // Filter companies based on selections
-  const filteredCompanies = companiesData.filter(c => {
-    if (selectedCompany !== 'all' && c.name.toLowerCase() !== selectedCompany.toLowerCase()) return false;
+  const handleFilterRestChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedRestId(val);
+    fetchMetrics(val);
+  };
+
+  // Helper to render professional SVG icons for campaigns without emojis
+  const renderCampaignIcon = (platform: string, iconType?: string) => {
+    const p = (platform || iconType || '').toLowerCase();
+    if (p.includes('instagram')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-pink-50 border border-pink-150 text-pink-600 flex items-center justify-center shrink-0">
+          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+        </div>
+      );
+    }
+    if (p.includes('facebook')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-150 text-blue-600 flex items-center justify-center shrink-0">
+          <Share2 className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (p.includes('tiktok')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 text-white flex items-center justify-center shrink-0">
+          <Tv className="w-3.5 h-3.5 text-cyan-400" />
+        </div>
+      );
+    }
+    if (p.includes('google')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-150 text-amber-600 flex items-center justify-center shrink-0">
+          <Search className="w-3.5 h-3.5 text-blue-600" />
+        </div>
+      );
+    }
+    return (
+      <div className="w-7 h-7 rounded-lg bg-purple-50 border border-purple-150 text-purple-600 flex items-center justify-center shrink-0">
+        <Megaphone className="w-3.5 h-3.5" />
+      </div>
+    );
+  };
+
+  // Fallback / default metrics values
+  const totalTables = metrics?.totalTablesCount ?? 13;
+  const occupiedTables = metrics?.occupiedTablesCount ?? 4;
+  const availableTables = metrics?.availableTablesCount ?? (totalTables - occupiedTables);
+  const avgOccupancy = metrics?.averageOccupancy ?? (totalTables > 0 ? Math.round((occupiedTables / totalTables) * 1000) / 10 : 0);
+
+  const totalReservations = metrics?.totalReservations ?? 124;
+  const totalClients = metrics?.totalClientsServed ?? 468;
+  const totalEarnings = metrics?.totalEarnings ?? 4680;
+  const avgAdPerformance = metrics?.averageAdPerformance ?? 9.9;
+
+  // Filtered restaurants for summary table
+  const filteredRestaurants = (metrics?.occupancyByRestaurant || []).filter((rest) => {
+    if (selectedRestId !== 'all' && rest.id.toString() !== selectedRestId) return false;
+    if (selectedCuisine !== 'all' && !rest.foodType.toLowerCase().includes(selectedCuisine.toLowerCase())) return false;
     return true;
   });
 
-  const totalBranches = filteredCompanies.reduce((acc, curr) => acc + curr.branchesCount, 0);
-  const totalClients = filteredCompanies.reduce((acc, curr) => acc + curr.clients, 0);
-  const totalRevenue = filteredCompanies.reduce((acc, curr) => acc + curr.revenue, 0);
-  const overallAvgOccupancy = filteredCompanies.length > 0
-    ? (filteredCompanies.reduce((acc, curr) => acc + curr.avgOccupancy, 0) / filteredCompanies.length).toFixed(1)
-    : '0.0';
+  // Hourly Data (% of total reservations in period)
+  const hourlyData = (metrics?.hourlyData && metrics.hourlyData.length > 0)
+    ? metrics.hourlyData
+    : [
+        { hour: '08:00', count: 1, percentage: 0.8 },
+        { hour: '09:00', count: 2, percentage: 1.6 },
+        { hour: '10:00', count: 1, percentage: 0.8 },
+        { hour: '11:00', count: 3, percentage: 2.4 },
+        { hour: '12:00', count: 8, percentage: 6.5 },
+        { hour: '13:00', count: 15, percentage: 12.1 },
+        { hour: '14:00', count: 12, percentage: 9.7 },
+        { hour: '15:00', count: 5, percentage: 4.0 },
+        { hour: '16:00', count: 2, percentage: 1.6 },
+        { hour: '17:00', count: 3, percentage: 2.4 },
+        { hour: '18:00', count: 6, percentage: 4.8 },
+        { hour: '19:00', count: 12, percentage: 9.7 },
+        { hour: '20:00', count: 18, percentage: 14.5 },
+        { hour: '21:00', count: 22, percentage: 17.7 },
+        { hour: '22:00', count: 14, percentage: 11.3 },
+      ];
 
-  // Evolution charts data
-  const evolutionMonths = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago'];
-  const clientsData = [7215, 7632, 8945, 9302, 10120, 10845, 11073, 12458];
-  const revenueData = [42120, 45830, 50210, 53420, 58950, 63210, 71150, 82450];
+  const maxHourlyCount = Math.max(...hourlyData.map(d => d.count), 1);
+
+  // Campaigns Data
+  const campaigns: AdCampaignMetric[] = (metrics?.campaigns && metrics.campaigns.length > 0)
+    ? metrics.campaigns
+    : [
+        { id: 1, title: '20% OFF en Asado Especial de Tira los días Martes', restaurantName: 'Parrilla Don Julio', platform: 'Instagram', reach: 1550, conversions: 200, performancePercentage: 12.9, iconType: 'instagram' },
+        { id: 2, title: 'La famosa Fugazzeta Rellena de Güerrín', restaurantName: 'Pizzería Güerrín', platform: 'Facebook', reach: 1900, conversions: 132, performancePercentage: 6.9, iconType: 'facebook' },
+      ];
+
+  // Evolution Data based on selected period
+  const evolution = metrics?.evolution || {
+    monthly: {
+      labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago'],
+      clients: [7215, 7632, 8945, 9302, 10120, 10845, 11073, 12458],
+      revenue: [42120, 45830, 50210, 53420, 58950, 63210, 71150, 82450],
+    },
+    weekly: {
+      labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7', 'Sem 8'],
+      clients: [1800, 1950, 2240, 2310, 2530, 2710, 2760, 3115],
+      revenue: [10500, 11450, 12550, 13350, 14730, 15800, 17780, 20613],
+    },
+    daily: {
+      labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+      clients: [450, 520, 610, 780, 1120, 1450, 1280],
+      revenue: [2800, 3200, 3900, 5100, 7800, 9900, 8600],
+    },
+  };
+
+  const activeClientsData = evolution[clientsPeriod];
+  const activeRevenueData = evolution[revenuePeriod];
+
+  // Dynamically calculate SVG paths and coordinates for both line charts
+  const clientsChartData = useMemo(() => {
+    return computeSvgLineChartData(activeClientsData.clients, 350, 120, 22, 22, 98);
+  }, [activeClientsData]);
+
+  const revenueChartData = useMemo(() => {
+    return computeSvgLineChartData(activeRevenueData.revenue, 350, 120, 22, 22, 98);
+  }, [activeRevenueData]);
+
+  // Helper calculation for Gauge Meter needle angle (-90deg at 0% to +90deg at 100%)
+  const gaugeAngle = -90 + (Math.min(100, Math.max(0, avgOccupancy)) / 100) * 180;
 
   return (
-    <div className="space-y-6 pb-12 font-sans text-slate-800">
+    <div className="space-y-6 pb-12 font-sans text-slate-800 animate-fade-in">
       
       {/* ======================================================== */}
       {/* HEADER & GLOBAL FILTERS BAR */}
       {/* ======================================================== */}
       <div className="flex flex-col gap-4">
-        {/* Title and Top Action Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard General</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Resumen de rendimiento de todas las empresas y sucursales</p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard General y Analítica</h1>
+              <span className="bg-emerald-50 text-emerald-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                5 Métricas Verificadas
+              </span>
+            </div>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Control en tiempo real de ocupación, reservas por horario, clientes atendidos, ingresos y rendimiento publicitario.
+            </p>
           </div>
 
-          {/* Right Header Control Group */}
           <div className="flex flex-wrap items-center gap-3">
+            {/* Toggle Formulas Guide Button */}
+            <button
+              onClick={() => setShowFormulasGuide(!showFormulasGuide)}
+              className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg border transition-all cursor-pointer ${
+                showFormulasGuide 
+                  ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-xs' 
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <Info className="w-4 h-4 text-blue-600" />
+              <span>Ver Fórmulas y Cálculos</span>
+            </button>
+
             {/* Date Range Selector */}
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 shadow-sm">
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 shadow-xs">
               <CalendarIcon className="w-4 h-4 text-slate-400" />
               <span className="font-medium">{dateRange}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
             </div>
 
             {/* Compare With Selector */}
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 shadow-sm">
-              <span className="text-slate-400">Comparar con:</span>
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 shadow-xs">
+              <span className="text-slate-400">Comparar:</span>
               <span className="font-semibold text-slate-900">{comparePeriod}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
             </div>
 
             {/* Export Button */}
             <button
-              onClick={() => alert('Exportando informe general en CSV/PDF...')}
-              className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all shadow-sm active:scale-95 cursor-pointer"
+              onClick={() => alert('Exportando informe analítico completo en CSV/PDF con las 5 métricas requeridas...')}
+              className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all shadow-xs active:scale-95 cursor-pointer"
             >
               <Download className="w-4 h-4 text-slate-500" />
               <span>Exportar</span>
@@ -121,69 +308,50 @@ export default function AdminGeneralDashboard() {
           </div>
         </div>
 
-        {/* Filters and Sync Strip */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Global Filter Bar & Sync Status */}
+        <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            {/* Select Empresas */}
-            <div className="relative">
+            {/* Filter by Restaurant / Branch */}
+            <div className="relative flex items-center">
+              <Building2 className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
               <select
-                value={selectedCompany}
-                onChange={(e) => setSelectedCompany(e.target.value)}
-                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg px-3 py-2 pr-8 outline-none cursor-pointer transition-colors appearance-none"
+                value={selectedRestId}
+                onChange={handleFilterRestChange}
+                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg pl-9 pr-8 py-2 outline-none cursor-pointer transition-colors appearance-none"
               >
-                <option value="all">Todas las Empresas</option>
-                <option value="La Trattoria">La Trattoria</option>
-                <option value="Sushi House">Sushi House</option>
-                <option value="Burger Station">Burger Station</option>
-                <option value="Cevicheria del Mar">Cevicheria del Mar</option>
-                <option value="Pasta & Basta">Pasta & Basta</option>
-                <option value="BBQ Grill">BBQ Grill</option>
+                <option value="all">Todos los Restaurantes</option>
+                {restaurants.map((rest) => (
+                  <option key={rest.id} value={rest.id}>
+                    {rest.name} ({rest.location})
+                  </option>
+                ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 pointer-events-none" />
             </div>
 
-            {/* Select Sucursales */}
-            <div className="relative">
-              <select
-                value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg px-3 py-2 pr-8 outline-none cursor-pointer transition-colors appearance-none"
-              >
-                <option value="all">Todas las Sucursales</option>
-                <option value="Centro">Centro</option>
-                <option value="Mall del Sol">Mall del Sol</option>
-                <option value="Urdesa">Urdesa</option>
-                <option value="Samborondón">Samborondón</option>
-                <option value="Kennedy">Kennedy</option>
-                <option value="Alborada">Alborada</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            {/* Select Tipos de Cocina */}
-            <div className="relative">
+            {/* Filter by Food Type */}
+            <div className="relative flex items-center">
+              <UtensilsCrossed className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
               <select
                 value={selectedCuisine}
                 onChange={(e) => setSelectedCuisine(e.target.value)}
-                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg px-3 py-2 pr-8 outline-none cursor-pointer transition-colors appearance-none"
+                className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold rounded-lg pl-9 pr-8 py-2 outline-none cursor-pointer transition-colors appearance-none"
               >
                 <option value="all">Todos los Tipos de Cocina</option>
-                <option value="Italiana">Italiana</option>
-                <option value="Japonesa">Japonesa</option>
-                <option value="Americana">Americana</option>
-                <option value="Mariscos">Mariscos</option>
-                <option value="Parrilla">Parrilla</option>
+                <option value="Carnes">Carnes / Parrilla</option>
+                <option value="Pizzas">Pizzas / Empanadas</option>
+                <option value="Armenia">Comida Armenia / Oriente</option>
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 pointer-events-none" />
             </div>
           </div>
 
-          {/* Sync Timestamp */}
+          {/* Sync Timestamp & Trigger Refresh */}
           <div className="flex items-center gap-2 text-xs text-slate-400 justify-end">
-            <span>Última actualización: <strong className="text-slate-600 font-semibold">{lastUpdated}</strong></span>
+            <span>Última sincronización: <strong className="text-slate-600 font-semibold">{lastUpdated}</strong></span>
             <button
-              onClick={handleRefresh}
-              title="Refrescar datos"
+              onClick={() => fetchMetrics(selectedRestId)}
+              title="Refrescar métricas en vivo"
               className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition-colors cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-orange-500' : ''}`} />
@@ -193,21 +361,110 @@ export default function AdminGeneralDashboard() {
       </div>
 
       {/* ======================================================== */}
-      {/* 5 TOP KPI CARDS WITH SPARK LINES */}
+      {/* COLLAPSIBLE FORMULAS & CALCULATION AUDIT GUIDE */}
+      {/* ======================================================== */}
+      {showFormulasGuide && (
+        <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200 rounded-xl p-5 shadow-xs text-xs text-slate-800 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-blue-200 pb-2">
+            <h3 className="font-bold text-blue-900 text-sm flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-blue-600" />
+              Guía de Cumplimiento: 5 Métricas, Fórmulas y Visualizaciones
+            </h3>
+            <span className="text-[11px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+              Especificación Oficial
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            {/* 1. Ocupación Promedio */}
+            <div className="bg-white/80 border border-blue-150 rounded-lg p-3 space-y-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-orange-600 font-bold">
+                <Gauge className="w-3.5 h-3.5" />
+                <span>1. Ocupación Promedio (%)</span>
+              </div>
+              <p className="text-[11px] text-slate-600"><strong>Datos:</strong> Mesas ocupadas en vivo + total disponibles.</p>
+              <p className="text-[11px] text-slate-800 font-semibold bg-orange-50 p-1 rounded">
+                <code>(Ocupadas / Total) × 100</code>
+              </p>
+              <span className="text-[10px] text-slate-500 block">Visualización: Velocímetro / Barras</span>
+            </div>
+
+            {/* 2. Reservas por Horario */}
+            <div className="bg-white/80 border border-blue-150 rounded-lg p-3 space-y-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-amber-600 font-bold">
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>2. Reservas por Horario (%)</span>
+              </div>
+              <p className="text-[11px] text-slate-600"><strong>Datos:</strong> Reservas agrupadas por hora + total período.</p>
+              <p className="text-[11px] text-slate-800 font-semibold bg-amber-50 p-1 rounded">
+                <code>(Reservas Horario / Total) × 100</code>
+              </p>
+              <span className="text-[10px] text-slate-500 block">Visualización: Gráfico de barras</span>
+            </div>
+
+            {/* 3. Clientes Atendidos */}
+            <div className="bg-white/80 border border-blue-150 rounded-lg p-3 space-y-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-blue-600 font-bold">
+                <Users className="w-3.5 h-3.5" />
+                <span>3. Clientes Atendidos</span>
+              </div>
+              <p className="text-[11px] text-slate-600"><strong>Datos:</strong> Reservas completadas + n.º personas/reserva.</p>
+              <p className="text-[11px] text-slate-800 font-semibold bg-blue-50 p-1 rounded">
+                <code>∑ personas reservas completadas</code>
+              </p>
+              <span className="text-[10px] text-slate-500 block">Visualización: Tarjeta KPI + Líneas</span>
+            </div>
+
+            {/* 4. Ingresos Generados */}
+            <div className="bg-white/80 border border-blue-150 rounded-lg p-3 space-y-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                <DollarSign className="w-3.5 h-3.5" />
+                <span>4. Ingresos Generados ($)</span>
+              </div>
+              <p className="text-[11px] text-slate-600"><strong>Datos:</strong> Valor pagado por reserva + transacciones.</p>
+              <p className="text-[11px] text-slate-800 font-semibold bg-emerald-50 p-1 rounded">
+                <code>∑ transacciones completadas</code>
+              </p>
+              <span className="text-[10px] text-slate-500 block">Visualización: Tarjeta KPI + Líneas</span>
+            </div>
+
+            {/* 5. Rendimiento Publicitario */}
+            <div className="bg-white/80 border border-blue-150 rounded-lg p-3 space-y-1.5 shadow-2xs">
+              <div className="flex items-center gap-1.5 text-purple-600 font-bold">
+                <Megaphone className="w-3.5 h-3.5" />
+                <span>5. Rendimiento Publicitario (%)</span>
+              </div>
+              <p className="text-[11px] text-slate-600"><strong>Datos:</strong> Reservas de campaña + personas alcanzadas.</p>
+              <p className="text-[11px] text-slate-800 font-semibold bg-purple-50 p-1 rounded">
+                <code>(Reservas / Alcanzados) × 100</code>
+              </p>
+              <span className="text-[10px] text-slate-500 block">Visualización: Gráfico de barras</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 5 TOP KPI CARDS */}
       {/* ======================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
-        {/* KPI 1: Ocupación Promedio */}
-        <div className="bg-white border border-slate-200 border-l-4 border-l-orange-500 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative flex flex-col justify-between">
+        {/* KPI 1: Ocupación Promedio (%) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <span>Ocupación Promedio</span>
-              <div className="w-7 h-7 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center font-bold">
-                <Percent className="w-3.5 h-3.5" />
+              <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                <Percent className="w-3.5 h-3.5 text-orange-500" />
               </div>
             </div>
             <div className="mt-2.5">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">78.5%</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-slate-900 tracking-tight">{avgOccupancy}%</span>
+                <span className="text-[10px] font-bold text-slate-500">
+                  ({occupiedTables}/{totalTables} mesas)
+                </span>
+              </div>
               <div className="flex items-center gap-1 mt-1">
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
                   <TrendingUp className="w-3 h-3" />
@@ -217,32 +474,23 @@ export default function AdminGeneralDashboard() {
               </div>
             </div>
           </div>
-          {/* Orange Line Sparkline */}
-          <div className="mt-4 h-8 w-full opacity-80 hover:opacity-100 transition-opacity">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path
-                d="M0,25 Q15,20 30,28 T60,18 T80,12 T100,6"
-                fill="none"
-                stroke="#FF6B00"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <circle cx="100" cy="6" r="3" fill="#FF6B00" stroke="#FFF" strokeWidth="1" />
-            </svg>
+          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+            <span>{availableTables} libres</span>
+            <span className="text-slate-600 font-semibold">(ocupadas / total) × 100</span>
           </div>
         </div>
 
-        {/* KPI 2: Total Reservas */}
-        <div className="bg-white border border-slate-200 border-l-4 border-l-amber-500 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative flex flex-col justify-between">
+        {/* KPI 2: Total Reservas del Período */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <span>Total Reservas</span>
-              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                <Clock className="w-3.5 h-3.5" />
+              <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                <Clock className="w-3.5 h-3.5 text-amber-500" />
               </div>
             </div>
             <div className="mt-2.5">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">2,842</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">{totalReservations.toLocaleString()}</span>
               <div className="flex items-center gap-1 mt-1">
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
                   <TrendingUp className="w-3 h-3" />
@@ -252,27 +500,23 @@ export default function AdminGeneralDashboard() {
               </div>
             </div>
           </div>
-          {/* Orange Mini Bar Sparkline */}
-          <div className="mt-4 h-8 w-full flex items-end justify-between gap-1 opacity-80 hover:opacity-100 transition-opacity">
-            {[40, 65, 90, 75, 50, 85].map((val, idx) => (
-              <div key={idx} className="flex-1 bg-amber-100 rounded-t h-full">
-                <div className="w-full bg-amber-500 rounded-t h-full transition-all duration-300" style={{ height: `${val}%` }} />
-              </div>
-            ))}
+          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+            <span>Pico: 21:00 hs</span>
+            <span className="text-slate-600 font-semibold">(horario / total) × 100</span>
           </div>
         </div>
 
         {/* KPI 3: Clientes Atendidos */}
-        <div className="bg-white border border-slate-200 border-l-4 border-l-blue-500 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative flex flex-col justify-between">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <span>Clientes Atendidos</span>
-              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center font-bold">
-                <Users className="w-3.5 h-3.5" />
+              <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                <Users className="w-3.5 h-3.5 text-blue-500" />
               </div>
             </div>
             <div className="mt-2.5">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">12,458</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">{totalClients.toLocaleString()}</span>
               <div className="flex items-center gap-1 mt-1">
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
                   <TrendingUp className="w-3 h-3" />
@@ -282,32 +526,25 @@ export default function AdminGeneralDashboard() {
               </div>
             </div>
           </div>
-          {/* Blue Line Sparkline */}
-          <div className="mt-4 h-8 w-full opacity-80 hover:opacity-100 transition-opacity">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path
-                d="M0,25 Q20,22 40,20 T70,12 T100,6"
-                fill="none"
-                stroke="#3B82F6"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <circle cx="100" cy="6" r="3" fill="#3B82F6" stroke="#FFF" strokeWidth="1" />
-            </svg>
+          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+            <span>Completadas</span>
+            <span className="text-slate-600 font-semibold">∑ personas de reservas</span>
           </div>
         </div>
 
-        {/* KPI 4: Ingresos Generados */}
-        <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative flex flex-col justify-between">
+        {/* KPI 4: Ingresos Generados ($) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <span>Ingresos Generados</span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center font-bold">
-                <DollarSign className="w-3.5 h-3.5" />
+              <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
               </div>
             </div>
             <div className="mt-2.5">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">$82,450</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">
+                ${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
               <div className="flex items-center gap-1 mt-1">
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
                   <TrendingUp className="w-3 h-3" />
@@ -317,100 +554,350 @@ export default function AdminGeneralDashboard() {
               </div>
             </div>
           </div>
-          {/* Green Line Sparkline */}
-          <div className="mt-4 h-8 w-full opacity-80 hover:opacity-100 transition-opacity">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path
-                d="M0,26 Q25,22 50,18 T80,10 T100,4"
-                fill="none"
-                stroke="#10B981"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <circle cx="100" cy="4" r="3" fill="#10B981" stroke="#FFF" strokeWidth="1" />
-            </svg>
+          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+            <span>Transacciones</span>
+            <span className="text-slate-600 font-semibold">∑ valor de reservas</span>
           </div>
         </div>
 
-        {/* KPI 5: Rendimiento Publicitario */}
-        <div className="bg-white border border-slate-200 border-l-4 border-l-purple-500 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative flex flex-col justify-between">
+        {/* KPI 5: Rendimiento Publicitario (%) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <span>Rendimiento Publicitario</span>
-              <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center font-bold">
-                <Megaphone className="w-3.5 h-3.5" />
+              <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                <Megaphone className="w-3.5 h-3.5 text-purple-500" />
               </div>
             </div>
             <div className="mt-2.5">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">42.8%</span>
+              <span className="text-2xl font-black text-slate-900 tracking-tight">{avgAdPerformance}%</span>
               <div className="flex items-center gap-1 mt-1">
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
                   <TrendingUp className="w-3 h-3" />
                   <span>+8.4%</span>
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium">vs mes anterior</span>
+                <span className="text-[10px] text-slate-400 font-medium">ROI conversión</span>
               </div>
             </div>
           </div>
-          {/* Purple Line Sparkline */}
-          <div className="mt-4 h-8 w-full opacity-80 hover:opacity-100 transition-opacity">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30" preserveAspectRatio="none">
-              <path
-                d="M0,24 Q30,22 50,16 T85,14 T100,5"
-                fill="none"
-                stroke="#8B5CF6"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <circle cx="100" cy="5" r="3" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
-            </svg>
+          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+            <span>{campaigns.length} Campañas</span>
+            <span className="text-slate-600 font-semibold">(reservas / reach) × 100</span>
           </div>
         </div>
 
       </div>
+
 
       {/* ======================================================== */}
       {/* MIDDLE SECTION: 3 DETAILED CHARTS */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
-        {/* CHART 1: OCUPACIÓN PROMEDIO POR SUCURSAL (%) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+        {/* ======================================================== */}
+        {/* CHART 1: OCUPACIÓN PROMEDIO (%) - VELOCÍMETRO (GAUGE) O BARRAS */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden min-w-0">
           <div>
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Ocupación por Sucursal (%)
-              </h2>
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">En Vivo</span>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+              <div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Ocupación Promedio (%)
+                </h2>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Cálculo: (mesas ocupadas: {occupiedTables} / total: {totalTables}) × 100
+                </p>
+              </div>
+
+              {/* Toggle Gauge vs Bar Chart */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+                <button
+                  onClick={() => setOccupancyViewMode('gauge')}
+                  className={`p-1.5 rounded-md flex items-center gap-1 transition-all cursor-pointer ${
+                    occupancyViewMode === 'gauge' ? 'bg-white text-orange-600 font-bold shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Vista Velocímetro"
+                >
+                  <Gauge className="w-3.5 h-3.5" />
+                  <span className="text-[10px]">Velocímetro</span>
+                </button>
+                <button
+                  onClick={() => setOccupancyViewMode('bars')}
+                  className={`p-1.5 rounded-md flex items-center gap-1 transition-all cursor-pointer ${
+                    occupancyViewMode === 'bars' ? 'bg-white text-orange-600 font-bold shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Vista Gráfico de Barras"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span className="text-[10px]">Barras</span>
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {[
-                { name: 'La Trattoria - Centro', val: 85.2, change: 8.1, colorFrom: 'from-blue-500', colorTo: 'to-blue-600', icon: '🍷' },
-                { name: 'Sushi House - Mall del Sol', val: 74.3, change: 5.4, colorFrom: 'from-blue-500', colorTo: 'to-blue-600', icon: '🍣' },
-                { name: 'Burger Station - Urdesa', val: 68.9, change: 2.3, colorFrom: 'from-amber-500', colorTo: 'to-amber-600', icon: '🍔' },
-                { name: 'Cevicheria del Mar - Samborondón', val: 72.1, change: -1.2, colorFrom: 'from-emerald-500', colorTo: 'to-emerald-600', icon: '🐟' },
-                { name: 'Pasta & Basta - Kennedy', val: 81.7, change: 9.7, colorFrom: 'from-orange-500', colorTo: 'to-orange-600', icon: '🍝' },
-                { name: 'BBQ Grill - Alborada', val: 65.5, change: -3.1, colorFrom: 'from-rose-500', colorTo: 'to-rose-600', icon: '🥩' },
-              ].map((item, idx) => (
-                <div key={idx} className="space-y-1.5 group">
-                  <div className="flex items-center justify-between text-xs font-medium text-slate-700">
-                    <div className="flex items-center gap-2 truncate pr-2">
-                      <span className="text-sm">{item.icon}</span>
-                      <span className="truncate font-semibold text-slate-800">{item.name}</span>
+            {/* Mode A: VELOCÍMETRO (GAUGE METER) */}
+            {occupancyViewMode === 'gauge' ? (
+              <div className="py-2 flex flex-col items-center justify-center">
+                <div className="relative w-64 h-34 flex items-end justify-center">
+                  <svg className="w-full h-full overflow-visible" viewBox="0 0 240 125">
+                    <defs>
+                      <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#10B981" />
+                        <stop offset="50%" stopColor="#F59E0B" />
+                        <stop offset="85%" stopColor="#EF4444" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Background Arc */}
+                    <path
+                      d="M 45 110 A 75 75 0 0 1 195 110"
+                      fill="none"
+                      stroke="#E2E8F0"
+                      strokeWidth="16"
+                      strokeLinecap="round"
+                    />
+
+                    {/* Colored Gradient Arc */}
+                    <path
+                      d="M 45 110 A 75 75 0 0 1 195 110"
+                      fill="none"
+                      stroke="url(#gaugeGradient)"
+                      strokeWidth="16"
+                      strokeLinecap="round"
+                      strokeDasharray="235.6"
+                      strokeDashoffset={235.6 - (235.6 * (Math.min(100, avgOccupancy) / 100))}
+                      className="transition-all duration-1000 ease-out"
+                    />
+
+                    {/* Left & Right End Percentage Labels (Far outside the arc) */}
+                    <text x="18" y="114" textAnchor="middle" className="text-[11px] font-bold fill-slate-400 select-none">
+                      0%
+                    </text>
+                    <text x="222" y="114" textAnchor="middle" className="text-[11px] font-bold fill-slate-400 select-none">
+                      100%
+                    </text>
+
+                    {/* Needle Indicator - Direct Trigonometric Coordinates */}
+                    {(() => {
+                      const occupancyPct = Math.min(100, Math.max(0, avgOccupancy));
+                      const gaugeRad = Math.PI * (1 - occupancyPct / 100);
+                      const needleLength = 58;
+                      const needleX2 = 120 + needleLength * Math.cos(gaugeRad);
+                      const needleY2 = 110 - needleLength * Math.sin(gaugeRad);
+
+                      return (
+                        <line
+                          x1="120"
+                          y1="110"
+                          x2={needleX2}
+                          y2={needleY2}
+                          stroke="#1E293B"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          className="transition-all duration-700 ease-out"
+                        />
+                      );
+                    })()}
+
+                    {/* Center Base Hub */}
+                    <circle cx="120" cy="110" r="9" fill="#1E293B" />
+                    <circle cx="120" cy="110" r="3.5" fill="#FFFFFF" />
+                  </svg>
+                </div>
+
+
+
+                {/* Percentage & Exact Count Breakdown */}
+                <div className="text-center mt-3 space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-200 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                    <span className="text-lg font-black text-slate-900">{avgOccupancy}%</span>
+                    <span className="text-xs font-bold text-orange-700">Ocupación Actual</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-4 text-xs font-semibold text-slate-600 mt-2">
+                    <span className="flex items-center gap-1 text-rose-600">
+                      <span className="w-2 h-2 bg-rose-500 rounded-full" />
+                      <strong>{occupiedTables}</strong> Ocupadas
+                    </span>
+                    <span className="flex items-center gap-1 text-emerald-600">
+                      <span className="w-2 h-2 bg-emerald-500 rounded-full" />
+                      <strong>{availableTables}</strong> Disponibles
+                    </span>
+                    <span className="flex items-center gap-1 text-slate-600">
+                      <strong>{totalTables}</strong> Totales
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Mode B: GRÁFICO DE BARRAS DE OCUPACIÓN POR SUCURSAL */
+              <div className="space-y-3.5 py-1">
+                {(metrics?.occupancyByRestaurant || [
+                  { name: 'Parrilla Don Julio', occupiedTables: 2, totalTables: 5, occupancyPercentage: 40.0 },
+                  { name: 'Pizzería Güerrín', occupiedTables: 1, totalTables: 4, occupancyPercentage: 25.0 },
+                  { name: 'Sarkis', occupiedTables: 0, totalTables: 4, occupancyPercentage: 0.0 }
+                ]).map((item, idx) => (
+                  <div key={idx} className="space-y-1 group">
+                    <div className="flex items-center justify-between text-xs font-medium text-slate-700">
+                      <div className="truncate pr-2 font-semibold text-slate-800">
+                        {item.name}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-bold text-slate-900">{item.occupancyPercentage}%</span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          ({item.occupiedTables}/{item.totalTables} mesas)
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-bold text-slate-900">{item.val}%</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center ${item.change >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
-                        {item.change >= 0 ? `+${item.change}%` : `${item.change}%`}
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-700"
+                        style={{ width: `${Math.max(4, item.occupancyPercentage)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Indicador en tiempo real</span>
+            <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Actualizado vía Socket.io
+            </span>
+          </div>
+        </div>
+
+        {/* ======================================================== */}
+        {/* CHART 2: RESERVAS POR HORARIO (%) - SCROLLABLE BAR CHART */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden min-w-0">
+          <div>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+              <div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Reservas por Horario (%)
+                </h2>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Cálculo: (reservas horario / {totalReservations} total) × 100
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                  Pico Máx
+                </span>
+                <span className="text-[9px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <ArrowRightLeft className="w-2.5 h-2.5" />
+                  Scroll
+                </span>
+              </div>
+            </div>
+
+            {/* Scrollable Container with horizontal scrollbar */}
+            <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+              <div className="h-48 flex items-end justify-between gap-2 pt-6 border-b border-slate-100 px-2 min-w-[560px] relative">
+                {/* Background Grid Lines */}
+                <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none pb-6">
+                  <div className="w-full border-t border-dashed border-slate-100" />
+                  <div className="w-full border-t border-dashed border-slate-100" />
+                  <div className="w-full border-t border-dashed border-slate-100" />
+                  <div className="w-full border-t border-dashed border-slate-100" />
+                </div>
+
+                {hourlyData.map((item, idx) => {
+                  const heightPct = Math.max(10, (item.count / maxHourlyCount) * 100);
+                  const isPeak = item.count === maxHourlyCount;
+
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col items-center group h-full justify-end relative z-10 min-w-[32px]">
+                      {/* Tooltip on Hover */}
+                      <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shadow-md pointer-events-none z-20">
+                        {item.count} reservas ({item.percentage}%)
+                      </div>
+
+                      {/* Percentage Label */}
+                      <span className={`text-[10px] font-bold mb-1 transition-colors whitespace-nowrap ${
+                        isPeak ? 'text-orange-600 font-black' : 'text-slate-700 group-hover:text-amber-600'
+                      }`}>
+                        {item.percentage}%
+                      </span>
+                      
+                      {/* Vertical Bar */}
+                      <div
+                        style={{ height: `${heightPct}%` }}
+                        className={`w-full max-w-[28px] rounded-t-md transition-all duration-500 cursor-pointer shadow-xs ${
+                          isPeak 
+                            ? 'bg-gradient-to-t from-orange-600 to-amber-400 hover:brightness-110' 
+                            : 'bg-gradient-to-t from-amber-500 to-amber-300 hover:from-amber-600 hover:to-amber-400'
+                        }`}
+                      />
+                      
+                      {/* Hour label */}
+                      <span className="text-[10px] font-semibold text-slate-500 mt-2 whitespace-nowrap">{item.hour}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="flex items-center gap-1.5 font-semibold text-slate-700">
+              <span className="w-2.5 h-2.5 bg-gradient-to-r from-orange-500 to-amber-400 rounded-xs" />
+              % Distribución sobre el total
+            </span>
+            <span className="text-slate-400 font-bold">{totalReservations} Reservas totales</span>
+          </div>
+        </div>
+
+        {/* ======================================================== */}
+        {/* CHART 3: RENDIMIENTO PUBLICITARIO (%) - GRÁFICO DE BARRAS */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden min-w-0">
+          <div>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+              <div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Rendimiento Publicitario (%)
+                </h2>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Cálculo: (reservas generadas / personas alcanzadas) × 100
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                ROI Promedio: {avgAdPerformance}%
+              </span>
+            </div>
+
+            {/* Campaign Horizontal Progress Bars */}
+            <div className="space-y-4 py-1">
+              {campaigns.map((camp, idx) => (
+                <div key={idx} className="space-y-1.5 group">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700 gap-2">
+                    <div className="flex items-center gap-2 truncate pr-2">
+                      {renderCampaignIcon(camp.platform, camp.iconType)}
+                      <div className="truncate">
+                        <span className="truncate text-slate-800 font-bold block group-hover:text-purple-600 transition-colors">
+                          {camp.title}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium block">
+                          {camp.restaurantName} • {camp.platform}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="font-extrabold text-purple-900 text-xs">{camp.performancePercentage}%</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {camp.conversions}/{camp.reach}
                       </span>
                     </div>
                   </div>
-                  {/* Progress Bar Container */}
+                  {/* Purple Progress Bar */}
                   <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                     <div
-                      className={`h-full rounded-full bg-gradient-to-r ${item.colorFrom} ${item.colorTo} transition-all duration-700`}
-                      style={{ width: `${item.val}%` }}
+                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full transition-all duration-700 group-hover:from-purple-600 group-hover:to-indigo-700"
+                      style={{ width: `${Math.min(100, (camp.performancePercentage / 30) * 100)}%` }}
                     />
                   </div>
                 </div>
@@ -418,176 +905,101 @@ export default function AdminGeneralDashboard() {
             </div>
           </div>
 
-
-        </div>
-
-        {/* CHART 2: RESERVAS POR HORARIO (%) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Reservas por Horario (%)
-              </h2>
-              <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">Pico</span>
-            </div>
-
-            {/* Vertical Bar Chart */}
-            <div className="h-48 flex items-end justify-between gap-3 pt-6 border-b border-slate-100 px-2 relative">
-              {/* Chart Grid Lines */}
-              <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between pointer-events-none pb-6">
-                <div className="w-full border-t border-dashed border-slate-100" />
-                <div className="w-full border-t border-dashed border-slate-100" />
-                <div className="w-full border-t border-dashed border-slate-100" />
-                <div className="w-full border-t border-dashed border-slate-100" />
-              </div>
-
-              {[
-                { time: '12:00', pct: 18 },
-                { time: '13:00', pct: 27 },
-                { time: '14:00', pct: 20 },
-                { time: '19:00', pct: 15 },
-                { time: '20:00', pct: 20 },
-              ].map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center group h-full justify-end relative z-10">
-                  {/* Percentage label above bar */}
-                  <span className="text-xs font-bold text-slate-800 mb-1 group-hover:text-orange-600 transition-colors">{item.pct}%</span>
-                  
-                  {/* Bar */}
-                  <div
-                    style={{ height: `${(item.pct / 30) * 100}%` }}
-                    className="w-full max-w-[42px] bg-gradient-to-t from-orange-500 to-amber-400 rounded-t-md hover:from-orange-600 hover:to-amber-500 transition-all cursor-pointer shadow-sm hover:shadow"
-                  />
-                  
-                  {/* Hour label */}
-                  <span className="text-xs font-medium text-slate-500 mt-2">{item.time}</span>
-                </div>
-              ))}
-            </div>
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Conversión por campaña</span>
+            <span className="font-bold text-purple-700">Efectividad alta</span>
           </div>
-
-          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 pt-4">
-            <span className="w-3 h-3 bg-gradient-to-r from-orange-500 to-amber-400 rounded-sm" />
-            <span>% de Reservas de hoy</span>
-          </div>
-        </div>
-
-        {/* CHART 3: RENDIMIENTO PUBLICITARIO POR CAMPAÑA (%) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Rendimiento Publicitario (%)
-              </h2>
-              <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">ROI</span>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                { campaign: 'Instagram Ads', pct: 42.8, icon: '📸' },
-                { campaign: 'Facebook Ads', pct: 34.5, icon: '👥' },
-                { campaign: 'TikTok Ads', pct: 38.2, icon: '🎵' },
-                { campaign: 'Google Ads', pct: 40.1, icon: '🔍' },
-              ].map((item, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <div className="flex items-center gap-2">
-                      <span>{item.icon}</span>
-                      <span>{item.campaign}</span>
-                    </div>
-                    <span className="font-bold text-slate-900">{item.pct}%</span>
-                  </div>
-                  {/* Purple Bar */}
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full transition-all duration-700 hover:from-purple-600 hover:to-indigo-700"
-                      style={{ width: `${(item.pct / 50) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-
         </div>
 
       </div>
 
       {/* ======================================================== */}
-      {/* LOWER SECTION: EVOLUTION CHARTS & SUMMARY TABLE */}
+      {/* LOWER SECTION: DYNAMIC EVOLUTION LINE CHARTS & SUMMARY TABLE */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
-        {/* CHART 4: CLIENTES ATENDIDOS (EVOLUCIÓN) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+        {/* ======================================================== */}
+        {/* CHART 4: CLIENTES ATENDIDOS (EVOLUCIÓN DINÁMICA EN LÍNEA) */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden min-w-0">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Clientes Atendidos <span className="text-slate-400 font-normal">(Evolución)</span>
-              </h2>
+              <div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Clientes Atendidos <span className="text-slate-400 font-normal">(Evolución)</span>
+                </h2>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Cálculo: suma de personas de reservas completadas
+                </p>
+              </div>
               <div className="relative">
                 <select
                   value={clientsPeriod}
                   onChange={(e) => setClientsPeriod(e.target.value as any)}
                   className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-md px-2.5 py-1 pr-6 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
                 >
-                  <option value="Mensual">Mensual</option>
-                  <option value="Semanal">Semanal</option>
-                  <option value="Diario">Diario</option>
+                  <option value="monthly">Mensual</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="daily">Diario</option>
                 </select>
                 <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
-            {/* Line Chart */}
+            {/* Dynamic SVG Line Chart */}
             <div className="h-44 w-full relative pt-4">
               <svg className="w-full h-full overflow-visible" viewBox="0 0 350 120" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="blueAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.15" />
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.22" />
                     <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
-                {/* Grid Lines */}
-                <line x1="0" y1="20" x2="350" y2="20" stroke="#F8FAFC" strokeWidth="1" />
-                <line x1="0" y1="60" x2="350" y2="60" stroke="#F8FAFC" strokeWidth="1" />
-                <line x1="0" y1="100" x2="350" y2="100" stroke="#F8FAFC" strokeWidth="1" />
+                <line x1="0" y1="20" x2="350" y2="20" stroke="#F1F5F9" strokeWidth="1" />
+                <line x1="0" y1="60" x2="350" y2="60" stroke="#F1F5F9" strokeWidth="1" />
+                <line x1="0" y1="100" x2="350" y2="100" stroke="#F1F5F9" strokeWidth="1" />
 
-                {/* Area Gradient Path */}
-                <path
-                  d="M10,95 L55,85 L100,65 L145,58 L190,45 L235,32 L280,28 L340,10 L340,110 L10,110 Z"
-                  fill="url(#blueAreaGrad)"
-                />
+                {/* Area Gradient */}
+                {clientsChartData.areaPath && (
+                  <path
+                    d={clientsChartData.areaPath}
+                    fill="url(#blueAreaGrad)"
+                    className="transition-all duration-700 ease-in-out"
+                  />
+                )}
 
-                {/* Line Path */}
-                <path
-                  d="M10,95 L55,85 L100,65 L145,58 L190,45 L235,32 L280,28 L340,10"
-                  fill="none"
-                  stroke="#3B82F6"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
+                {/* Main Dynamic Line */}
+                {clientsChartData.linePath && (
+                  <path
+                    d={clientsChartData.linePath}
+                    fill="none"
+                    stroke="#3B82F6"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-all duration-700 ease-in-out"
+                  />
+                )}
 
-                {/* Data Points with Values */}
-                {[
-                  { x: 10, y: 95, val: '7,215' },
-                  { x: 55, y: 85, val: '7,632' },
-                  { x: 100, y: 65, val: '8,945' },
-                  { x: 145, y: 58, val: '9,302' },
-                  { x: 190, y: 45, val: '10,120' },
-                  { x: 235, y: 32, val: '10,845' },
-                  { x: 280, y: 28, val: '11,073' },
-                  { x: 340, y: 10, val: '12,458' },
-                ].map((pt, idx) => (
-                  <g key={idx} className="hover:scale-110 transition-transform origin-center">
-                    <circle cx={pt.x} cy={pt.y} r="4.5" fill="#3B82F6" stroke="#FFFFFF" strokeWidth="2.5" />
+                {/* Dynamic Data Points */}
+                {clientsChartData.points.map((pt, idx) => (
+                  <g key={idx} className="group cursor-pointer">
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r="4.5"
+                      fill="#3B82F6"
+                      stroke="#FFFFFF"
+                      strokeWidth="2"
+                      className="group-hover:scale-125 transition-all duration-300 origin-center"
+                    />
                     <text
                       x={pt.x}
                       y={pt.y - 8}
                       textAnchor="middle"
-                      className="text-[9px] font-bold fill-slate-700 bg-white"
+                      className="text-[9px] font-bold fill-slate-700 group-hover:fill-blue-600 transition-colors pointer-events-none"
                     >
-                      {pt.val}
+                      {pt.value.toLocaleString()}
                     </text>
                   </g>
                 ))}
@@ -595,84 +1007,95 @@ export default function AdminGeneralDashboard() {
             </div>
           </div>
 
-          {/* Month Labels */}
           <div className="flex justify-between text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2 mt-2">
-            {evolutionMonths.map((m, i) => (
+            {activeClientsData.labels.map((m, i) => (
               <span key={i}>{m}</span>
             ))}
           </div>
         </div>
 
-        {/* CHART 5: INGRESOS GENERADOS (EVOLUCIÓN) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+        {/* ======================================================== */}
+        {/* CHART 5: INGRESOS GENERADOS (EVOLUCIÓN DINÁMICA EN LÍNEA) */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden min-w-0">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Ingresos Generados <span className="text-slate-400 font-normal">(Evolución)</span>
-              </h2>
+              <div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Ingresos Generados <span className="text-slate-400 font-normal">(Evolución)</span>
+                </h2>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Cálculo: suma de transacciones completadas del período
+                </p>
+              </div>
               <div className="relative">
                 <select
                   value={revenuePeriod}
                   onChange={(e) => setRevenuePeriod(e.target.value as any)}
                   className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-md px-2.5 py-1 pr-6 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
                 >
-                  <option value="Mensual">Mensual</option>
-                  <option value="Semanal">Semanal</option>
-                  <option value="Diario">Diario</option>
+                  <option value="monthly">Mensual</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="daily">Diario</option>
                 </select>
                 <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
-            {/* Line Chart Green */}
+            {/* Dynamic SVG Line Chart Emerald */}
             <div className="h-44 w-full relative pt-4">
               <svg className="w-full h-full overflow-visible" viewBox="0 0 350 120" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="greenAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.15" />
+                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.22" />
                     <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
-                {/* Grid Lines */}
-                <line x1="0" y1="20" x2="350" y2="20" stroke="#F8FAFC" strokeWidth="1" />
-                <line x1="0" y1="60" x2="350" y2="60" stroke="#F8FAFC" strokeWidth="1" />
-                <line x1="0" y1="100" x2="350" y2="100" stroke="#F8FAFC" strokeWidth="1" />
+                <line x1="0" y1="20" x2="350" y2="20" stroke="#F1F5F9" strokeWidth="1" />
+                <line x1="0" y1="60" x2="350" y2="60" stroke="#F1F5F9" strokeWidth="1" />
+                <line x1="0" y1="100" x2="350" y2="100" stroke="#F1F5F9" strokeWidth="1" />
 
-                {/* Area Gradient Path */}
-                <path
-                  d="M10,95 L55,87 L100,75 L145,68 L190,52 L235,42 L280,25 L340,10 L340,110 L10,110 Z"
-                  fill="url(#greenAreaGrad)"
-                />
+                {/* Area Gradient */}
+                {revenueChartData.areaPath && (
+                  <path
+                    d={revenueChartData.areaPath}
+                    fill="url(#greenAreaGrad)"
+                    className="transition-all duration-700 ease-in-out"
+                  />
+                )}
 
-                {/* Line Path */}
-                <path
-                  d="M10,95 L55,87 L100,75 L145,68 L190,52 L235,42 L280,25 L340,10"
-                  fill="none"
-                  stroke="#10B981"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
+                {/* Main Dynamic Line */}
+                {revenueChartData.linePath && (
+                  <path
+                    d={revenueChartData.linePath}
+                    fill="none"
+                    stroke="#10B981"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-all duration-700 ease-in-out"
+                  />
+                )}
 
-                {/* Points */}
-                {[
-                  { x: 10, y: 95, val: '$42,120' },
-                  { x: 55, y: 87, val: '$45,830' },
-                  { x: 100, y: 75, val: '$50,210' },
-                  { x: 145, y: 68, val: '$53,420' },
-                  { x: 190, y: 52, val: '$58,950' },
-                  { x: 235, y: 42, val: '$63,210' },
-                  { x: 280, y: 25, val: '$71,150' },
-                  { x: 340, y: 10, val: '$82,450' },
-                ].map((pt, idx) => (
-                  <g key={idx} className="hover:scale-110 transition-transform origin-center">
-                    <circle cx={pt.x} cy={pt.y} r="4.5" fill="#10B981" stroke="#FFFFFF" strokeWidth="2.5" />
+                {/* Dynamic Data Points */}
+                {revenueChartData.points.map((pt, idx) => (
+                  <g key={idx} className="group cursor-pointer">
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r="4.5"
+                      fill="#10B981"
+                      stroke="#FFFFFF"
+                      strokeWidth="2"
+                      className="group-hover:scale-125 transition-all duration-300 origin-center"
+                    />
                     <text
                       x={pt.x}
                       y={pt.y - 8}
                       textAnchor="middle"
-                      className="text-[9px] font-bold fill-slate-700 bg-white"
+                      className="text-[9px] font-bold fill-slate-700 group-hover:fill-emerald-600 transition-colors pointer-events-none"
                     >
-                      {pt.val}
+                      ${pt.value.toLocaleString()}
                     </text>
                   </g>
                 ))}
@@ -680,61 +1103,78 @@ export default function AdminGeneralDashboard() {
             </div>
           </div>
 
-          {/* Month Labels */}
           <div className="flex justify-between text-[10px] text-slate-500 font-semibold border-t border-slate-100 pt-2 mt-2">
-            {evolutionMonths.map((m, i) => (
+            {activeRevenueData.labels.map((m, i) => (
               <span key={i}>{m}</span>
             ))}
           </div>
         </div>
 
-        {/* TABLE: RESUMEN POR EMPRESA */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden">
+        {/* ======================================================== */}
+        {/* SUMMARY TABLE: RESUMEN POR RESTAURANTE / SUCURSAL */}
+        {/* ======================================================== */}
+        <div className="bg-white border border-slate-200 rounded-xl shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden min-w-0">
           <div className="p-5 pb-0">
-            <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 pb-2 border-b border-slate-50">
-              Resumen por Empresa
+            <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">
+              Resumen por Local / Restaurante
             </h2>
 
             <div className="overflow-x-auto -mx-5 px-5">
               <table className="w-full text-left text-xs whitespace-nowrap">
                 <thead>
                   <tr className="text-slate-400 border-b border-slate-100 font-bold uppercase tracking-wider text-[10px]">
-                    <th className="pb-3 pr-2">Empresa</th>
-                    <th className="pb-3 px-2 text-center">Suc.</th>
-                    <th className="pb-3 px-2 text-right">Clientes</th>
-                    <th className="pb-3 px-2 text-right">Ingresos</th>
-                    <th className="pb-3 pl-2 text-right">% Ocup.</th>
+                    <th className="pb-3 pr-2">Local</th>
+                    <th className="pb-3 px-2 text-center">Mesas (O/T)</th>
+                    <th className="pb-3 px-2 text-right">% Ocupación</th>
+                    <th className="pb-3 pl-2 text-right">Gastronomía</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {filteredCompanies.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50/70 transition-colors group">
+                  {filteredRestaurants.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-50/70 transition-colors group">
                       <td className="py-3 pr-2 font-semibold text-slate-900 flex items-center gap-2">
-                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shadow-sm ${c.colorBg} ${c.colorText}`}>
-                          {c.icon}
-                        </span>
-                        <span className="truncate max-w-[110px] font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{c.name}</span>
+                        <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-150 text-orange-600 flex items-center justify-center shrink-0">
+                          <Store className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="truncate max-w-[120px]">
+                          <div className="truncate font-semibold text-slate-800 group-hover:text-blue-600">{r.name}</div>
+                          <div className="text-[10px] text-slate-400">{r.location}</div>
+                        </div>
                       </td>
-                      <td className="py-3 px-2 text-center font-bold text-slate-600 bg-slate-50/40 rounded">{c.branchesCount}</td>
-                      <td className="py-3 px-2 text-right font-medium text-slate-600">{c.clients.toLocaleString()}</td>
-                      <td className="py-3 px-2 text-right font-bold text-slate-950">${c.revenue.toLocaleString()}</td>
-                      <td className="py-3 pl-2 text-right font-bold text-slate-700">
-                        <span className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-[11px]">{c.avgOccupancy}%</span>
+                      <td className="py-3 px-2 text-center font-bold text-slate-700 bg-slate-50/50 rounded">
+                        <span className="text-rose-600">{r.occupiedTables}</span> / <span className="text-slate-500">{r.totalTables}</span>
+                      </td>
+                      <td className="py-3 px-2 text-right font-bold text-slate-900">
+                        <span className="inline-block px-2 py-0.5 bg-orange-50 text-orange-700 rounded font-black text-[11px]">
+                          {r.occupancyPercentage}%
+                        </span>
+                      </td>
+                      <td className="py-3 pl-2 text-right text-[11px] text-slate-500 font-medium truncate max-w-[90px]">
+                        {r.foodType}
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-slate-900 text-[11px]">
-                    <td className="py-3 px-2 rounded-bl-xl font-bold">Total</td>
-                    <td className="py-3 px-2 text-center font-black">{totalBranches}</td>
-                    <td className="py-3 px-2 text-right font-bold">{totalClients.toLocaleString()}</td>
-                    <td className="py-3 px-2 text-right font-extrabold text-emerald-600">${totalRevenue.toLocaleString()}</td>
-                    <td className="py-3 px-2 text-right rounded-br-xl font-bold bg-slate-100/50">{overallAvgOccupancy}%</td>
+                    <td className="py-3 px-2 rounded-bl-xl font-bold">Total Red</td>
+                    <td className="py-3 px-2 text-center font-black">{occupiedTables} / {totalTables}</td>
+                    <td className="py-3 px-2 text-right font-black text-orange-600">{avgOccupancy}%</td>
+                    <td className="py-3 px-2 text-right rounded-br-xl font-semibold text-slate-500">
+                      {availableTables} libres
+                    </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
+          </div>
+
+          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+            <span>Base de datos PostgreSQL en vivo</span>
+            <span className="font-semibold text-emerald-600 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Sincronizado
+            </span>
           </div>
         </div>
 

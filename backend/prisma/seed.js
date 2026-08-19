@@ -149,42 +149,59 @@ async function main() {
   });
 
   // 6. Create some historical reservations to populate admin dashboard
-  // We'll create reservations for user Juan Pérez
-  const tDonJulio2 = await prisma.table.findFirst({
-    where: { restaurantId: rest1.id, number: 2 },
-  });
-  const tDonJulio5 = await prisma.table.findFirst({
-    where: { restaurantId: rest1.id, number: 5 },
-  });
-  const tGuerrin3 = await prisma.table.findFirst({
-    where: { restaurantId: rest2.id, number: 3 },
+  // We'll generate a rich dataset across various hours and tables to show realistic graphs
+  const allTables = await prisma.table.findMany({});
+  const clients = [client1, client2];
+
+  // Define operational hours with different reservation frequencies for lunch and dinner peaks
+  const hoursDistribution = [
+    { hour: '08:00', count: 1 },
+    { hour: '09:00', count: 2 },
+    { hour: '10:00', count: 1 },
+    { hour: '11:00', count: 3 },
+    { hour: '12:00', count: 8 },
+    { hour: '13:00', count: 15 },
+    { hour: '14:00', count: 12 },
+    { hour: '15:00', count: 5 },
+    { hour: '16:00', count: 2 },
+    { hour: '17:00', count: 3 },
+    { hour: '18:00', count: 6 },
+    { hour: '19:00', count: 12 },
+    { hour: '20:00', count: 18 },
+    { hour: '21:00', count: 22 },
+    { hour: '22:00', count: 14 },
+  ];
+
+  const reservationsData = [];
+  let dayOffset = 0;
+
+  hoursDistribution.forEach(({ hour, count }) => {
+    for (let i = 0; i < count; i++) {
+      // Pick a table deterministically/sequentially
+      const tableIndex = (hour.charCodeAt(0) + hour.charCodeAt(1) + i) % allTables.length;
+      const table = allTables[tableIndex];
+      // Alternate between client1 and client2
+      const client = clients[i % clients.length];
+      // Price is proportional to table capacity (e.g., $10 per seat)
+      const cost = table.capacity * 10.0;
+      
+      // Distribute reservations across the last 7 days
+      dayOffset = (dayOffset + 1) % 7;
+      const createdAt = new Date(Date.now() - 3600000 * 24 * dayOffset - 3600000 * (i % 5));
+
+      reservationsData.push({
+        userId: client.id,
+        tableId: table.id,
+        startTime: hour,
+        cost: cost,
+        createdAt: createdAt,
+      });
+    }
   });
 
-  if (tDonJulio2 && tDonJulio5 && tGuerrin3) {
+  if (reservationsData.length > 0) {
     await prisma.reservation.createMany({
-      data: [
-        {
-          userId: client1.id,
-          tableId: tDonJulio2.id,
-          startTime: '12:00',
-          cost: 25.00,
-          createdAt: new Date(Date.now() - 3600000 * 5), // 5 hours ago
-        },
-        {
-          userId: client1.id,
-          tableId: tDonJulio5.id,
-          startTime: '20:00',
-          cost: 40.00,
-          createdAt: new Date(Date.now() - 3600000 * 2), // 2 hours ago
-        },
-        {
-          userId: client2.id,
-          tableId: tGuerrin3.id,
-          startTime: '13:00',
-          cost: 20.00,
-          createdAt: new Date(Date.now() - 3600000 * 24), // 1 day ago
-        },
-      ],
+      data: reservationsData,
     });
   }
 
